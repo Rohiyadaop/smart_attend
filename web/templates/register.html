@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend — Register Student</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f4ef;--bg-card:#ffffff;--bg-soft:#f0ebe3;--navy:#1a2540;--navy-lt:#2c3e6b;--sage:#4a7c59;--sage-lt:#6aab80;--amber:#c97d2f;--crimson:#b03030;--text:#1a2540;--text-sec:#5a6680;--text-dim:#9aa3b5;--border:#ddd8cf;--shadow:0 2px 16px rgba(26,37,64,0.08);--radius:10px;--font-serif:'Playfair Display',Georgia,serif;--font-sans:'DM Sans',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:240px;flex-shrink:0;background:var(--navy);position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sidebar-brand{padding:28px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.brand-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--sage),var(--sage-lt));display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:22px;}
+.brand-name{font-family:var(--font-serif);font-size:19px;font-weight:700;color:#fff;}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.nav-section{padding:18px 14px 6px;}
+.nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:0 8px;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.18s;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.nav-item.active{background:rgba(106,171,128,0.25);color:#7dcc96;border-left:3px solid var(--sage-lt);}
+.nav-item .icon{font-size:16px;width:20px;text-align:center;}
+.main{flex:1;display:flex;flex-direction:column;}
+.topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--navy);}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:500;border:none;transition:all 0.18s;text-decoration:none;}
+.btn-primary{background:var(--navy);color:#fff;}
+.btn-primary:hover{background:var(--navy-lt);}
+.btn-sage{background:var(--sage);color:#fff;}
+.btn-sage:hover{background:var(--sage-lt);}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg-soft);}
+.btn-sm{padding:6px 14px;font-size:12px;}
+.content{padding:24px 28px;flex:1;max-width:760px;}
+.section-title{font-family:var(--font-serif);font-size:26px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.section-sub{font-size:13px;color:var(--text-sec);margin-bottom:24px;}
+.reg-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;box-shadow:var(--shadow);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:5px;letter-spacing:0.3px;}
+.field input,.field select{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:7px;font-family:var(--font-sans);font-size:14px;color:var(--text);background:var(--bg-soft);outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.field input:focus,.field select:focus{border-color:var(--navy);background:#fff;box-shadow:0 0 0 3px rgba(26,37,64,0.06);}
+.field.full{grid-column:1/-1;}
+.cam-preview{width:100%;aspect-ratio:4/3;background:var(--navy);border-radius:8px;overflow:hidden;position:relative;margin-bottom:12px;}
+.cam-preview img{width:100%;height:100%;object-fit:cover;}
+.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:13px;}
+.photo-count{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);}
+.status-box{border-radius:8px;padding:14px 16px;font-size:13px;margin-top:16px;display:none;}
+.status-ok{background:rgba(74,124,89,0.1);border:1px solid rgba(74,124,89,0.2);color:var(--sage);}
+.status-err{background:rgba(176,48,48,0.08);border:1px solid rgba(176,48,48,0.2);color:var(--crimson);}
+.status-loading{background:rgba(201,125,47,0.08);border:1px solid rgba(201,125,47,0.2);color:var(--amber);}
+.divider{border:none;border-top:1px solid var(--border);margin:22px 0;}
+.instructions{background:var(--bg-soft);border-radius:8px;padding:16px 18px;font-size:12px;color:var(--text-sec);line-height:1.8;}
+.instructions ol{padding-left:18px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🎓</div>
+      <div class="brand-name">SmartAttend</div>
+      <div class="brand-sub">Face Recognition System</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <a class="nav-item" href="/"><span class="icon">⊞</span> Dashboard</a>
+      <a class="nav-item" href="/live"><span class="icon">◉</span> Live Camera</a>
+      <a class="nav-item" href="/attendance"><span class="icon">☑</span> Attendance</a>
+      <a class="nav-item" href="/students"><span class="icon">◈</span> Students</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item active" href="/register"><span class="icon">⊕</span> Register Student</a>
+      <a class="nav-item" href="/admin"><span class="icon">⚙</span> System Admin</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Register New Student</div>
+      <a class="btn btn-ghost btn-sm" href="/logout">Sign Out</a>
+    </div>
+
+    <div class="content">
+      <div class="section-title">Student Registration</div>
+      <div class="section-sub">Fill in the details and the system will capture face photos automatically.</div>
+
+      <div class="reg-card">
+        <div class="form-grid">
+          <div class="field">
+            <label>Student ID *</label>
+            <input type="text" id="fStudentId" placeholder="STU001" style="text-transform:uppercase">
+          </div>
+          <div class="field">
+            <label>Full Name *</label>
+            <input type="text" id="fName" placeholder="John Doe">
+          </div>
+          <div class="field">
+            <label>Department</label>
+            <select id="fDept">
+              <option value="">Select Department</option>
+              <option>Computer Science</option>
+              <option>Electronics</option>
+              <option>Mechanical</option>
+              <option>Civil</option>
+              <option>Electrical</option>
+              <option>Information Technology</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Year</label>
+            <select id="fYear">
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4">4th Year</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="fEmail" placeholder="john@college.ac.in">
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input type="tel" id="fPhone" placeholder="+91 9XXXXXXXXX">
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Camera preview -->
+        <div style="font-weight:600;color:var(--navy);margin-bottom:10px;">📷 Camera Preview</div>
+        <div class="cam-preview">
+          <img src="/video_feed" alt="Camera feed" id="camPreview">
+        </div>
+        <div class="photo-count">System will capture 5 photos automatically when you click Register.</div>
+
+        <div class="instructions" style="margin-top:14px;">
+          <strong>Instructions for best results:</strong>
+          <ol>
+            <li>Face the camera directly with good lighting</li>
+            <li>Remove glasses or hats if possible</li>
+            <li>Keep a neutral expression</li>
+            <li>Stay still during photo capture</li>
+            <li>After registering, click <strong>Retrain Model</strong> in Admin panel</li>
+          </ol>
+        </div>
+
+        <div id="statusBox" class="status-box"></div>
+
+        <div style="display:flex;gap:12px;margin-top:20px;">
+          <button class="btn btn-sage" id="registerBtn" onclick="registerStudent()" style="flex:1;justify-content:center;font-size:15px;padding:12px;">
+            ⊕ Register Student
+          </button>
+          <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function registerStudent() {
+  const id   = document.getElementById('fStudentId').value.trim().toUpperCase();
+  const name = document.getElementById('fName').value.trim();
+  if (!id || !name) {
+    showStatus('Student ID and Name are required.', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true;
+  btn.textContent = '📷 Capturing photos…';
+  showStatus('Capturing face photos. Please look at the camera…', 'loading');
+
+  fetch('/api/register', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      student_id: id,
+      name:       name,
+      department: document.getElementById('fDept').value,
+      year:       parseInt(document.getElementById('fYear').value),
+      email:      document.getElementById('fEmail').value.trim(),
+      phone:      document.getElementById('fPhone').value.trim(),
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    btn.disabled = false;
+    btn.textContent = '⊕ Register Student';
+    if (d.success) {
+      showStatus(`✓ ${d.message} — Please retrain the model in Admin panel.`, 'ok');
+      clearForm();
+    } else {
+      showStatus('✗ ' + d.message, 'err');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.textContent = '⊕ Register Student';
+    showStatus('Network error: ' + err.message, 'err');
+  });
+}
+
+function showStatus(msg, type) {
+  const box = document.getElementById('statusBox');
+  box.className = `status-box status-${type}`;
+  box.style.display = 'block';
+  box.textContent = msg;
+}
+
+function clearForm() {
+  ['fStudentId','fName','fEmail','fPhone'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fDept').value = '';
+  document.getElementById('fYear').value = '1';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend — Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f7f4ef; --bg-card:#ffffff; --bg-soft:#f0ebe3;
+  --navy:#1a2540; --navy-lt:#2c3e6b; --sage:#4a7c59; --sage-lt:#6aab80;
+  --amber:#c97d2f; --crimson:#b03030;
+  --text:#1a2540; --text-sec:#5a6680; --text-dim:#9aa3b5;
+  --border:#ddd8cf; --shadow:0 2px 16px rgba(26,37,64,0.08);
+  --radius:10px;
+  --font-serif:'Playfair Display',Georgia,serif;
+  --font-sans:'DM Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:240px;flex-shrink:0;background:var(--navy);position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sidebar-brand{padding:28px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.brand-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--sage),var(--sage-lt));display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:22px;}
+.brand-name{font-family:var(--font-serif);font-size:19px;font-weight:700;color:#fff;}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.nav-section{padding:18px 14px 6px;}
+.nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:0 8px;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.18s;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.nav-item.active{background:rgba(106,171,128,0.25);color:#7dcc96;border-left:3px solid var(--sage-lt);}
+.nav-item .icon{font-size:16px;width:20px;text-align:center;}
+.main{flex:1;display:flex;flex-direction:column;}
+.topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--navy);}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:500;border:none;transition:all 0.18s;text-decoration:none;}
+.btn-primary{background:var(--navy);color:#fff;}
+.btn-primary:hover{background:var(--navy-lt);}
+.btn-sage{background:var(--sage);color:#fff;}
+.btn-sage:hover{background:var(--sage-lt);}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg-soft);}
+.btn-sm{padding:6px 14px;font-size:12px;}
+.content{padding:24px 28px;flex:1;}
+.filter-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);}
+.filter-bar label{font-size:12px;font-weight:500;color:var(--text-sec);flex-shrink:0;}
+.filter-bar input[type=date]{padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-sans);font-size:13px;color:var(--text);background:var(--bg-soft);outline:none;}
+.filter-bar input[type=date]:focus{border-color:var(--navy);}
+.kpi-row{display:flex;gap:14px;margin-bottom:20px;}
+.kpi-chip{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;flex:1;box-shadow:var(--shadow);}
+.kpi-chip-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:2px;}
+.kpi-chip-val{font-family:var(--font-serif);font-size:26px;font-weight:700;color:var(--navy);}
+.table-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.table-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.table-title{font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--navy);}
+.att-table{width:100%;border-collapse:collapse;}
+.att-table th{padding:10px 16px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);background:var(--bg-soft);font-weight:600;border-bottom:1px solid var(--border);}
+.att-table td{padding:10px 16px;border-bottom:1px solid rgba(221,216,207,0.5);font-size:13px;color:var(--text-sec);}
+.att-table tr:last-child td{border-bottom:none;}
+.att-table tr:hover td{background:var(--bg-soft);}
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:600;}
+.badge-present{background:rgba(74,124,89,0.12);color:var(--sage);border:1px solid rgba(74,124,89,0.2);}
+.badge-year{background:rgba(26,37,64,0.08);color:var(--navy);border:1px solid var(--border);}
+.conf-bar{width:60px;height:5px;background:var(--bg-soft);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:5px;}
+.conf-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--sage-lt));border-radius:3px;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-dim);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🎓</div>
+      <div class="brand-name">SmartAttend</div>
+      <div class="brand-sub">Face Recognition System</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <a class="nav-item" href="/"><span class="icon">⊞</span> Dashboard</a>
+      <a class="nav-item" href="/live"><span class="icon">◉</span> Live Camera</a>
+      <a class="nav-item active" href="/attendance"><span class="icon">☑</span> Attendance</a>
+      <a class="nav-item" href="/students"><span class="icon">◈</span> Students</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/register"><span class="icon">⊕</span> Register Student</a>
+      <a class="nav-item" href="/admin"><span class="icon">⚙</span> System Admin</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Attendance Records</div>
+      <div class="topbar-right">
+        <a class="btn btn-ghost btn-sm" href="/download/attendance?date={{ selected_date }}">↓ Download CSV</a>
+        <a class="btn btn-primary btn-sm" href="/logout">Sign Out</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Filter -->
+      <div class="filter-bar">
+        <label>Date:</label>
+        <input type="date" id="dateFilter" value="{{ selected_date }}"
+               onchange="window.location='/attendance?date='+this.value">
+        <button class="btn btn-ghost btn-sm"
+                onclick="document.getElementById('dateFilter').value=new Date().toISOString().split('T')[0];window.location='/attendance'">
+          Today
+        </button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-chip">
+          <div class="kpi-chip-label">Total Students</div>
+          <div class="kpi-chip-val">{{ summary.total_students }}</div>
+        </div>
+        <div class="kpi-chip">
+          <div class="kpi-chip-label">Present</div>
+          <div class="kpi-chip-val" style="color:var(--sage)">{{ summary.present }}</div>
+        </div>
+        <div class="kpi-chip">
+          <div class="kpi-chip-label">Absent</div>
+          <div class="kpi-chip-val" style="color:var(--crimson)">{{ summary.absent }}</div>
+        </div>
+        <div class="kpi-chip">
+          <div class="kpi-chip-label">Attendance %</div>
+          <div class="kpi-chip-val" style="color:var(--amber)">{{ summary.attendance_pct }}%</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">{{ selected_date }} — {{ records|length }} Records</div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="att-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Student ID</th><th>Name</th>
+                <th>Department</th><th>Year</th><th>Time</th><th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in records %}
+              <tr>
+                <td style="font-family:var(--font-mono);color:var(--text-dim)">{{ loop.index }}</td>
+                <td style="font-family:var(--font-mono);font-size:12px">{{ r.student_id }}</td>
+                <td style="font-weight:600;color:var(--text)">{{ r.name }}</td>
+                <td>{{ r.department or '—' }}</td>
+                <td><span class="badge badge-year">Year {{ r.year }}</span></td>
+                <td style="font-family:var(--font-mono);font-size:12px">{{ r.time }}</td>
+                <td>
+                  <div class="conf-bar"><div class="conf-fill" style="width:{{ (r.confidence * 100)|round }}%"></div></div>
+                  <span style="font-family:var(--font-mono);font-size:11px">{{ '%.0f'|format(r.confidence*100) }}%</span>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    No attendance records for {{ selected_date }}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

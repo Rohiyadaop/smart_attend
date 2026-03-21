@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend — Students</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f4ef;--bg-card:#ffffff;--bg-soft:#f0ebe3;--navy:#1a2540;--navy-lt:#2c3e6b;--sage:#4a7c59;--sage-lt:#6aab80;--amber:#c97d2f;--crimson:#b03030;--text:#1a2540;--text-sec:#5a6680;--text-dim:#9aa3b5;--border:#ddd8cf;--shadow:0 2px 16px rgba(26,37,64,0.08);--radius:10px;--font-serif:'Playfair Display',Georgia,serif;--font-sans:'DM Sans',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:240px;flex-shrink:0;background:var(--navy);position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sidebar-brand{padding:28px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.brand-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--sage),var(--sage-lt));display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:22px;}
+.brand-name{font-family:var(--font-serif);font-size:19px;font-weight:700;color:#fff;}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.nav-section{padding:18px 14px 6px;}
+.nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:0 8px;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.18s;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.nav-item.active{background:rgba(106,171,128,0.25);color:#7dcc96;border-left:3px solid var(--sage-lt);}
+.nav-item .icon{font-size:16px;width:20px;text-align:center;}
+.main{flex:1;display:flex;flex-direction:column;}
+.topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--navy);}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:500;border:none;transition:all 0.18s;text-decoration:none;}
+.btn-primary{background:var(--navy);color:#fff;}
+.btn-primary:hover{background:var(--navy-lt);}
+.btn-sage{background:var(--sage);color:#fff;}
+.btn-danger{background:var(--crimson);color:#fff;}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg-soft);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.content{padding:24px 28px;flex:1;}
+.search-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);}
+.search-bar input{flex:1;padding:8px 14px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-sans);font-size:14px;outline:none;background:var(--bg-soft);}
+.search-bar input:focus{border-color:var(--navy);background:#fff;}
+.student-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.student-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);transition:transform 0.2s,box-shadow 0.2s;position:relative;}
+.student-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(26,37,64,0.12);}
+.student-avatar{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--navy),var(--navy-lt));display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px;}
+.student-name{font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--navy);margin-bottom:2px;}
+.student-id{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-bottom:10px;}
+.student-meta{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-sec);}
+.student-meta span{display:flex;align-items:center;gap:6px;}
+.student-actions{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:600;}
+.badge-dept{background:rgba(201,125,47,0.1);color:var(--amber);border:1px solid rgba(201,125,47,0.2);}
+.badge-year{background:rgba(26,37,64,0.08);color:var(--navy);border:1px solid var(--border);}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,37,64,0.4);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-card);border-radius:14px;padding:28px 32px;width:440px;box-shadow:0 20px 60px rgba(26,37,64,0.2);}
+.modal-title{font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--navy);margin-bottom:8px;}
+.modal-text{font-size:13px;color:var(--text-sec);margin-bottom:20px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-dim);}
+.empty-icon{font-size:44px;margin-bottom:12px;}
+.empty-title{font-family:var(--font-serif);font-size:20px;color:var(--navy);margin-bottom:6px;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🎓</div>
+      <div class="brand-name">SmartAttend</div>
+      <div class="brand-sub">Face Recognition System</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <a class="nav-item" href="/"><span class="icon">⊞</span> Dashboard</a>
+      <a class="nav-item" href="/live"><span class="icon">◉</span> Live Camera</a>
+      <a class="nav-item" href="/attendance"><span class="icon">☑</span> Attendance</a>
+      <a class="nav-item active" href="/students"><span class="icon">◈</span> Students</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/register"><span class="icon">⊕</span> Register Student</a>
+      <a class="nav-item" href="/admin"><span class="icon">⚙</span> System Admin</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Students ({{ students|length }})</div>
+      <div style="display:flex;gap:10px;">
+        <a class="btn btn-sage btn-sm" href="/register">⊕ Register New</a>
+        <a class="btn btn-ghost btn-sm" href="/logout">Sign Out</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <form class="search-bar" method="GET" action="/students">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search by name, ID, or department…">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        {% if query %}<a class="btn btn-ghost btn-sm" href="/students">Clear</a>{% endif %}
+      </form>
+
+      {% if students %}
+      <div class="student-grid">
+        {% for s in students %}
+        <div class="student-card">
+          <div class="student-avatar">👤</div>
+          <div class="student-name">{{ s.name }}</div>
+          <div class="student-id">{{ s.student_id }}</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+            {% if s.department %}<span class="badge badge-dept">{{ s.department }}</span>{% endif %}
+            <span class="badge badge-year">Year {{ s.year }}</span>
+          </div>
+          <div class="student-meta">
+            {% if s.email %}<span>✉ {{ s.email }}</span>{% endif %}
+            {% if s.phone %}<span>📱 {{ s.phone }}</span>{% endif %}
+            <span>📅 Since {{ s.registered_at[:10] }}</span>
+          </div>
+          <div class="student-actions">
+            <a class="btn btn-ghost btn-sm" href="/attendance?student={{ s.student_id }}"
+               style="flex:1;justify-content:center;">History</a>
+            <button class="btn btn-danger btn-sm"
+                    onclick="confirmDelete('{{ s.student_id }}', '{{ s.name }}')">Delete</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <div class="empty-title">No students found</div>
+        <p>{% if query %}No results for "{{ query }}"{% else %}Register your first student to get started{% endif %}</p>
+        <a class="btn btn-sage" href="/register" style="margin-top:16px;">⊕ Register Student</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Delete Student</div>
+    <div class="modal-text" id="deleteModalText">Are you sure?</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let deleteId = null;
+
+function confirmDelete(id, name) {
+  deleteId = id;
+  document.getElementById('deleteModalText').textContent =
+    `This will permanently delete ${name} (${id}) and all their attendance records. This cannot be undone.`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+  deleteId = null;
+}
+
+document.getElementById('confirmDeleteBtn').onclick = function() {
+  if (!deleteId) return;
+  fetch('/api/delete_student', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({student_id: deleteId})
+  }).then(r => r.json()).then(d => {
+    if (d.success) window.location.reload();
+    else alert('Error: ' + d.message);
+  });
+};
+</script>
+</body>
+</html>

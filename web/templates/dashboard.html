@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ════════════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Warm Academic / Institutional Light
+   Palette: warm ivory background, deep navy, sage green accent,
+   amber highlights. Typography: Playfair Display + DM Sans.
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  --bg:        #f7f4ef;
+  --bg-card:   #ffffff;
+  --bg-soft:   #f0ebe3;
+  --navy:      #1a2540;
+  --navy-lt:   #2c3e6b;
+  --sage:      #4a7c59;
+  --sage-lt:   #6aab80;
+  --amber:     #c97d2f;
+  --amber-lt:  #e8a050;
+  --crimson:   #b03030;
+  --text:      #1a2540;
+  --text-sec:  #5a6680;
+  --text-dim:  #9aa3b5;
+  --border:    #ddd8cf;
+  --shadow:    0 2px 16px rgba(26,37,64,0.08);
+  --shadow-lg: 0 8px 40px rgba(26,37,64,0.14);
+  --radius:    10px;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans:  'DM Sans', system-ui, sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--navy);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 28px 22px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.brand-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--sage), var(--sage-lt));
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; font-size: 22px;
+}
+.brand-name {
+  font-family: var(--font-serif); font-size: 19px; font-weight: 700;
+  color: #fff; letter-spacing: 0.5px;
+}
+.brand-sub {
+  font-size: 10px; color: rgba(255,255,255,0.4);
+  letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px;
+}
+
+.nav-section { padding: 18px 14px 6px; }
+.nav-label {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(255,255,255,0.25); padding: 0 8px; margin-bottom: 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 8px; cursor: pointer;
+  color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500;
+  text-decoration: none; transition: all 0.18s;
+}
+.nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-item.active {
+  background: rgba(106,171,128,0.25); color: #7dcc96;
+  border-left: 3px solid var(--sage-lt);
+}
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  margin-top: auto; padding: 16px 14px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.live-indicator {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  font-size: 11px; color: rgba(255,255,255,0.4);
+}
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #888; flex-shrink: 0; transition: background 0.3s;
+}
+.dot.active {
+  background: #4de784;
+  box-shadow: 0 0 0 3px rgba(77,231,132,0.25);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* ── Main ─────────────────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.topbar {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.topbar-title {
+  font-family: var(--font-serif); font-size: 22px; font-weight: 600;
+  color: var(--navy);
+}
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.date-chip {
+  padding: 5px 14px; border-radius: 20px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  font-size: 12px; color: var(--text-sec);
+  font-family: var(--font-mono);
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 18px; border-radius: 8px; cursor: pointer;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  border: none; transition: all 0.18s; text-decoration: none;
+}
+.btn-primary {
+  background: var(--navy); color: #fff;
+}
+.btn-primary:hover { background: var(--navy-lt); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-sage {
+  background: var(--sage); color: #fff;
+}
+.btn-sage:hover { background: var(--sage-lt); transform: translateY(-1px); }
+.btn-amber {
+  background: var(--amber); color: #fff;
+}
+.btn-amber:hover { background: var(--amber-lt); }
+.btn-ghost {
+  background: transparent; color: var(--text-sec);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--bg-soft); color: var(--text); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-danger { background: var(--crimson); color: #fff; }
+.btn-danger:hover { filter: brightness(1.1); }
+
+/* ── Page content ─────────────────────────────────────────────── */
+.content { padding: 24px 28px; overflow-y: auto; flex: 1; }
+
+/* ── KPI Cards ────────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 16px; margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  position: relative; overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.kpi-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+}
+.kpi-card.k-total::before   { background: linear-gradient(90deg, var(--navy), var(--navy-lt)); }
+.kpi-card.k-present::before { background: linear-gradient(90deg, var(--sage), var(--sage-lt)); }
+.kpi-card.k-absent::before  { background: linear-gradient(90deg, var(--crimson), #e05555); }
+.kpi-card.k-pct::before     { background: linear-gradient(90deg, var(--amber), var(--amber-lt)); }
+
+.kpi-icon {
+  font-size: 28px; margin-bottom: 10px;
+  display: block;
+}
+.kpi-label {
+  font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 4px; font-weight: 500;
+}
+.kpi-value {
+  font-family: var(--font-serif); font-size: 34px; font-weight: 700;
+  color: var(--navy); line-height: 1;
+}
+.kpi-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+/* ── Charts row ───────────────────────────────────────────────── */
+.charts-row {
+  display: grid; grid-template-columns: 2fr 1fr;
+  gap: 16px; margin-bottom: 24px;
+}
+
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.card-header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-title {
+  font-family: var(--font-serif); font-size: 16px; font-weight: 600;
+  color: var(--navy);
+}
+.card-body { padding: 18px 20px; }
+.chart-wrap { position: relative; height: 200px; }
+
+/* ── Bottom row ───────────────────────────────────────────────── */
+.bottom-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Attendance table ─────────────────────────────────────────── */
+.att-table { width: 100%; border-collapse: collapse; }
+.att-table th {
+  padding: 8px 12px; text-align: left; font-size: 10px;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
+  background: var(--bg-soft); font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+.att-table td {
+  padding: 9px 12px; border-bottom: 1px solid rgba(221,216,207,0.4);
+  font-size: 13px; color: var(--text-sec);
+}
+.att-table tr:last-child td { border-bottom: none; }
+.att-table tr:hover td { background: var(--bg-soft); }
+
+.badge {
+  display: inline-block; padding: 2px 9px; border-radius: 12px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+}
+.badge-present { background: rgba(74,124,89,0.12); color: var(--sage); border: 1px solid rgba(74,124,89,0.2); }
+.badge-year    { background: rgba(26,37,64,0.08);  color: var(--navy); border: 1px solid var(--border); }
+
+/* ── Live Feed panel ──────────────────────────────────────────── */
+.live-feed-card {
+  background: var(--navy); border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow-lg);
+}
+.live-feed-header {
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.live-feed-title {
+  font-family: var(--font-serif); color: #fff; font-size: 15px; font-weight: 600;
+}
+.live-cam {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block; background: #0a1020;
+}
+.live-status-bar {
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.live-name {
+  font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.6);
+}
+.live-name span { color: #7dcc96; font-weight: 500; }
+
+/* ── Dept chart ───────────────────────────────────────────────── */
+.dept-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+.dept-item { display: flex; flex-direction: column; gap: 4px; }
+.dept-row  { display: flex; justify-content: space-between; align-items: center; }
+.dept-name { font-size: 12px; font-weight: 500; color: var(--text-sec); }
+.dept-count{ font-size: 12px; font-family: var(--font-mono); color: var(--text-dim); }
+.dept-bar  { height: 5px; background: var(--bg-soft); border-radius: 3px; overflow: hidden; }
+.dept-fill { height: 100%; background: linear-gradient(90deg, var(--sage), var(--sage-lt)); border-radius: 3px; transition: width 0.8s ease; }
+
+/* ── Toast ─────────────────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 22px; right: 22px; z-index: 999;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast-msg {
+  padding: 11px 18px; border-radius: 8px; font-size: 13px;
+  box-shadow: var(--shadow-lg); animation: toast-in 0.3s ease;
+  max-width: 300px; line-height: 1.4; font-weight: 500;
+}
+@keyframes toast-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.toast-success { background: var(--sage); color: #fff; }
+.toast-warn    { background: var(--amber); color: #fff; }
+.toast-error   { background: var(--crimson); color: #fff; }
+.toast-info    { background: var(--navy); color: #fff; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .charts-row { grid-template-columns: 1fr; }
+  .bottom-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🎓</div>
+      <div class="brand-name">SmartAttend</div>
+      <div class="brand-sub">Face Recognition System</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <a class="nav-item active" href="/">
+        <span class="icon">⊞</span> Dashboard
+      </a>
+      <a class="nav-item" href="/live">
+        <span class="icon">◉</span> Live Camera
+      </a>
+      <a class="nav-item" href="/attendance">
+        <span class="icon">☑</span> Attendance
+      </a>
+      <a class="nav-item" href="/students">
+        <span class="icon">◈</span> Students
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/register">
+        <span class="icon">⊕</span> Register Student
+      </a>
+      <a class="nav-item" href="/admin">
+        <span class="icon">⚙</span> System Admin
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="live-indicator">
+        <div class="dot" id="recogDot"></div>
+        <span id="recogStatusText">Recognition OFF</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Overview Dashboard</div>
+      <div class="topbar-right">
+        <div class="date-chip" id="dateChip">—</div>
+        <button class="btn btn-ghost btn-sm" onclick="window.location='/download/attendance'">
+          ↓ Export CSV
+        </button>
+        <button class="btn btn-sage btn-sm" id="recogBtn" onclick="toggleRecognition()">
+          ▶ Start Recognition
+        </button>
+        <a class="btn btn-primary btn-sm" href="/logout">Sign Out</a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- KPI Row -->
+      <div class="kpi-grid">
+        <div class="kpi-card k-total">
+          <span class="kpi-icon">👥</span>
+          <div class="kpi-label">Total Students</div>
+          <div class="kpi-value" id="kpiTotal">{{ summary.total_students }}</div>
+          <div class="kpi-sub">Registered in system</div>
+        </div>
+        <div class="kpi-card k-present">
+          <span class="kpi-icon">✅</span>
+          <div class="kpi-label">Present Today</div>
+          <div class="kpi-value" id="kpiPresent">{{ summary.present }}</div>
+          <div class="kpi-sub">Attendance marked</div>
+        </div>
+        <div class="kpi-card k-absent">
+          <span class="kpi-icon">⚠️</span>
+          <div class="kpi-label">Absent Today</div>
+          <div class="kpi-value" id="kpiAbsent">{{ summary.absent }}</div>
+          <div class="kpi-sub">Not yet marked</div>
+        </div>
+        <div class="kpi-card k-pct">
+          <span class="kpi-icon">📊</span>
+          <div class="kpi-label">Attendance %</div>
+          <div class="kpi-value" id="kpiPct">{{ summary.attendance_pct }}%</div>
+          <div class="kpi-sub">Today's rate</div>
+        </div>
+      </div>
+
+      <!-- Charts + Live -->
+      <div class="charts-row">
+        <!-- Weekly trend -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">7-Day Attendance Trend</div>
+            <span style="font-size:11px;color:var(--text-dim)">Students present per day</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dept breakdown -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">By Department</div>
+          </div>
+          <div class="card-body">
+            <div class="dept-list" id="deptList">
+              {% set max_dept = dept|map(attribute='present')|max if dept else 1 %}
+              {% for d in dept %}
+              <div class="dept-item">
+                <div class="dept-row">
+                  <span class="dept-name">{{ d.department or 'Unknown' }}</span>
+                  <span class="dept-count">{{ d.present }}</span>
+                </div>
+                <div class="dept-bar">
+                  <div class="dept-fill" style="width:{{ (d.present / max_dept * 100)|round }}%"></div>
+                </div>
+              </div>
+              {% else %}
+              <div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px 0;">
+                No attendance data yet
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent + Live Feed -->
+      <div class="bottom-row">
+        <!-- Recent attendance -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Attendance</div>
+            <a href="/attendance" class="btn btn-ghost btn-sm">View All →</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="att-table" id="recentTable">
+              <thead>
+                <tr>
+                  <th>Student</th><th>Dept</th><th>Year</th><th>Time</th><th>Conf.</th>
+                </tr>
+              </thead>
+              <tbody id="recentBody">
+                {% for r in recent %}
+                <tr>
+                  <td>
+                    <div style="font-weight:600;color:var(--text)">{{ r.name }}</div>
+                    <div style="font-size:10px;font-family:var(--font-mono);color:var(--text-dim)">{{ r.student_id }}</div>
+                  </td>
+                  <td>{{ r.department or '—' }}</td>
+                  <td><span class="badge badge-year">Yr {{ r.year }}</span></td>
+                  <td style="font-family:var(--font-mono);font-size:12px">{{ r.time }}</td>
+                  <td style="font-family:var(--font-mono);font-size:11px;color:var(--sage)">{{ '%.0f'|format(r.confidence * 100) }}%</td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="5" style="text-align:center;padding:28px;color:var(--text-dim)">
+                    No attendance marked yet today
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Live Camera Feed -->
+        <div class="live-feed-card">
+          <div class="live-feed-header">
+            <div class="dot active"></div>
+            <div class="live-feed-title">Live Camera Feed</div>
+            <div style="margin-left:auto;">
+              <span style="font-size:10px;color:rgba(255,255,255,0.3);font-family:var(--font-mono)">
+                Model: {{ model_stats.unique_students }} students
+              </span>
+            </div>
+          </div>
+          <img class="live-cam" id="liveCam"
+               src="/video_feed"
+               alt="Live Camera"
+               onerror="this.style.background='#0f1829';this.alt='Camera unavailable'">
+          <div class="live-status-bar">
+            <div class="live-name">
+              Last: <span id="liveLastName">—</span>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.3)">
+              Today: <span id="liveTodayCount" style="color:#7dcc96">0</span> marked
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  SmartAttend Dashboard JS
+// ═══════════════════════════════════════════════════════════════
+
+// ── Date chip ────────────────────────────────────────────────────
+(function() {
+  const now = new Date();
+  document.getElementById('dateChip').textContent =
+    now.toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'short', year:'numeric'});
+})();
+
+// ── Trend chart ──────────────────────────────────────────────────
+const trendData = {{ trend | tojson }};
+const trendChart = new Chart(document.getElementById('trendChart'), {
+  type: 'bar',
+  data: {
+    labels: trendData.map(d => {
+      const dt = new Date(d.date);
+      return dt.toLocaleDateString('en-IN', {weekday:'short', day:'numeric'});
+    }),
+    datasets: [{
+      label: 'Present',
+      data: trendData.map(d => d.count),
+      backgroundColor: 'rgba(74,124,89,0.15)',
+      borderColor: '#4a7c59',
+      borderWidth: 2,
+      borderRadius: 6,
+      hoverBackgroundColor: 'rgba(74,124,89,0.3)',
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.raw} students present`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: { color: '#9aa3b5', font: { family: 'DM Sans', size: 11 } }
+      },
+      y: {
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: { color: '#9aa3b5', font: { family: 'DM Sans', size: 11 }, stepSize: 1 },
+        beginAtZero: true,
+      }
+    }
+  }
+});
+
+// ── Recognition toggle ────────────────────────────────────────────
+let recognitionOn = {{ 'true' if recog.running else 'false' }};
+
+function toggleRecognition() {
+  const endpoint = recognitionOn ? '/api/recognition/stop' : '/api/recognition/start';
+  fetch(endpoint, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.status === 'started' || d.status === 'stopped') {
+        recognitionOn = !recognitionOn;
+        updateRecogUI();
+        toast(recognitionOn ? '▶ Recognition started' : '■ Recognition stopped',
+              recognitionOn ? 'success' : 'info');
+      } else if (d.message) {
+        toast(d.message, 'error');
+      }
+    }).catch(() => toast('Connection error', 'error'));
+}
+
+function updateRecogUI() {
+  const btn = document.getElementById('recogBtn');
+  const dot = document.getElementById('recogDot');
+  const txt = document.getElementById('recogStatusText');
+
+  if (recognitionOn) {
+    btn.textContent = '■ Stop Recognition';
+    btn.className   = 'btn btn-danger btn-sm';
+    dot.classList.add('active');
+    txt.textContent = 'Recognition ON';
+  } else {
+    btn.textContent = '▶ Start Recognition';
+    btn.className   = 'btn btn-sage btn-sm';
+    dot.classList.remove('active');
+    txt.textContent = 'Recognition OFF';
+  }
+}
+updateRecogUI();
+
+// ── Live status polling ───────────────────────────────────────────
+function pollStatus() {
+  fetch('/api/live_status')
+    .then(r => r.json())
+    .then(d => {
+      recognitionOn = d.running;
+      updateRecogUI();
+
+      if (d.last_name) {
+        document.getElementById('liveLastName').textContent =
+          `${d.last_name} (${d.last_time||''})`;
+      }
+      document.getElementById('liveTodayCount').textContent = d.today_count || 0;
+
+      // Update KPIs
+      fetch('/api/stats')
+        .then(r => r.json())
+        .then(s => {
+          const sum = s.summary;
+          document.getElementById('kpiTotal').textContent   = sum.total_students;
+          document.getElementById('kpiPresent').textContent = sum.present;
+          document.getElementById('kpiAbsent').textContent  = sum.absent;
+          document.getElementById('kpiPct').textContent     = sum.attendance_pct + '%';
+        });
+    }).catch(() => {});
+}
+setInterval(pollStatus, 3000);
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg, type = 'info', ms = 3500) {
+  const c  = document.getElementById('toast');
+  const el = document.createElement('div');
+  el.className = `toast-msg toast-${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+</script>
+</body>
+</html>

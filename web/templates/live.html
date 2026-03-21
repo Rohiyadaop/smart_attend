@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend — Live Camera</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1a2540;--sage:#4a7c59;--sage-lt:#6aab80;--font-serif:'Playfair Display',serif;--font-sans:'DM Sans',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#060d1a;color:#fff;font-family:var(--font-sans);height:100vh;display:flex;flex-direction:column;}
+.bar{background:rgba(10,18,36,0.95);padding:12px 22px;display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(10px);}
+.bar-title{font-family:var(--font-serif);font-size:18px;font-weight:600;}
+.dot{width:8px;height:8px;border-radius:50%;background:#4de784;box-shadow:0 0 0 3px rgba(77,231,132,0.25);animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:var(--font-sans);font-size:12px;font-weight:500;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.7);text-decoration:none;transition:all 0.18s;}
+.btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
+.btn-green{background:rgba(74,124,89,0.3);border-color:rgba(74,124,89,0.5);color:#7dcc96;}
+.btn-red{background:rgba(176,48,48,0.3);border-color:rgba(176,48,48,0.5);color:#ff8080;}
+.cam-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center;background:#06101e;}
+.cam-feed{max-width:100%;max-height:100%;object-fit:contain;}
+.overlay{position:absolute;bottom:0;left:0;right:0;padding:20px 24px;background:linear-gradient(0deg,rgba(6,13,26,0.95),transparent);display:flex;align-items:flex-end;justify-content:space-between;}
+.face-status{font-family:var(--font-mono);font-size:13px;color:rgba(255,255,255,0.7);}
+.face-status .name{color:#7dcc96;font-size:18px;font-weight:500;display:block;margin-bottom:2px;}
+.face-status .sub{color:rgba(255,255,255,0.35);font-size:11px;}
+.counter-panel{text-align:right;font-family:var(--font-mono);}
+.counter-panel .big{font-size:32px;font-weight:700;color:#7dcc96;line-height:1;}
+.counter-panel .lbl{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="dot"></div>
+  <div class="bar-title">Live Recognition Feed</div>
+  <div class="bar-right">
+    <button class="btn btn-green" id="startBtn" onclick="controlRecog('start')">▶ Start Recognition</button>
+    <button class="btn btn-red"   id="stopBtn"  onclick="controlRecog('stop')">■ Stop</button>
+    <a class="btn" href="/">← Dashboard</a>
+  </div>
+</div>
+
+<div class="cam-wrap">
+  <img class="cam-feed" src="/video_feed" alt="Camera feed"
+       onerror="this.style.opacity='0.3'">
+  <div class="overlay">
+    <div class="face-status">
+      <span class="name" id="faceName">—</span>
+      <span class="sub" id="faceStatus">Waiting for recognition…</span>
+    </div>
+    <div class="counter-panel">
+      <div class="big" id="todayBig">0</div>
+      <div class="lbl">MARKED TODAY</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function controlRecog(action) {
+  fetch('/api/recognition/' + action, {method:'POST'})
+    .then(r => r.json());
+}
+
+setInterval(() => {
+  fetch('/api/live_status').then(r => r.json()).then(d => {
+    document.getElementById('todayBig').textContent = d.today_count || 0;
+    if (d.last_name) {
+      document.getElementById('faceName').textContent = d.last_name;
+      const st = {marked:'✓ Attendance Marked', duplicate:'Already marked today',
+                  low_confidence:'Low confidence — not marked', unknown:'Unknown face'};
+      document.getElementById('faceStatus').textContent = st[d.last_status] || d.last_status;
+    }
+  });
+}, 2000);
+</script>
+</body>
+</html>

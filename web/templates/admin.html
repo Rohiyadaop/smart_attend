@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f4ef;--bg-card:#ffffff;--bg-soft:#f0ebe3;--navy:#1a2540;--navy-lt:#2c3e6b;--sage:#4a7c59;--sage-lt:#6aab80;--amber:#c97d2f;--crimson:#b03030;--text:#1a2540;--text-sec:#5a6680;--text-dim:#9aa3b5;--border:#ddd8cf;--shadow:0 2px 16px rgba(26,37,64,0.08);--radius:10px;--font-serif:'Playfair Display',Georgia,serif;--font-sans:'DM Sans',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:240px;flex-shrink:0;background:var(--navy);position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sidebar-brand{padding:28px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.brand-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--sage),var(--sage-lt));display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:22px;}
+.brand-name{font-family:var(--font-serif);font-size:19px;font-weight:700;color:#fff;}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.nav-section{padding:18px 14px 6px;}
+.nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:0 8px;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.18s;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.nav-item.active{background:rgba(106,171,128,0.25);color:#7dcc96;border-left:3px solid var(--sage-lt);}
+.nav-item .icon{font-size:16px;width:20px;text-align:center;}
+.main{flex:1;display:flex;flex-direction:column;}
+.topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--navy);}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:500;border:none;transition:all 0.18s;text-decoration:none;}
+.btn-primary{background:var(--navy);color:#fff;}
+.btn-sage{background:var(--sage);color:#fff;}
+.btn-sage:hover{background:var(--sage-lt);}
+.btn-amber{background:var(--amber);color:#fff;}
+.btn-danger{background:var(--crimson);color:#fff;}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg-soft);}
+.btn-sm{padding:6px 14px;font-size:12px;}
+.content{padding:24px 28px;flex:1;}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
+.card-header{padding:18px 22px 14px;border-bottom:1px solid var(--border);}
+.card-title{font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--navy);}
+.card-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.card-body{padding:20px 22px;}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bg-soft);}
+.stat-row:last-child{border-bottom:none;}
+.stat-label{font-size:12px;color:var(--text-sec);}
+.stat-val{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--navy);}
+.progress-bar{height:8px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:14px 0;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--sage-lt));border-radius:4px;transition:width 0.5s ease;}
+.progress-label{font-size:11px;color:var(--text-dim);font-family:var(--font-mono);}
+.log-box{background:var(--navy);border-radius:8px;padding:14px 16px;font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,0.7);max-height:180px;overflow-y:auto;line-height:1.8;}
+.log-box .log-ok{color:#7dcc96;}
+.log-box .log-err{color:#ff8080;}
+.log-box .log-info{color:#80c8ff;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🎓</div>
+      <div class="brand-name">SmartAttend</div>
+      <div class="brand-sub">Face Recognition System</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <a class="nav-item" href="/"><span class="icon">⊞</span> Dashboard</a>
+      <a class="nav-item" href="/live"><span class="icon">◉</span> Live Camera</a>
+      <a class="nav-item" href="/attendance"><span class="icon">☑</span> Attendance</a>
+      <a class="nav-item" href="/students"><span class="icon">◈</span> Students</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/register"><span class="icon">⊕</span> Register Student</a>
+      <a class="nav-item active" href="/admin"><span class="icon">⚙</span> System Admin</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">System Administration</div>
+      <a class="btn btn-ghost btn-sm" href="/logout">Sign Out</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-grid">
+
+        <!-- Model Status -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🧠 Recognition Model</div>
+            <div class="card-sub">Face encoding statistics</div>
+          </div>
+          <div class="card-body">
+            <div class="stat-row">
+              <span class="stat-label">Model loaded</span>
+              <span class="stat-val" style="color:{% if model_stats.loaded %}var(--sage){% else %}var(--crimson){% endif %}">
+                {% if model_stats.loaded %}✓ YES{% else %}✗ NO{% endif %}
+              </span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Total encodings</span>
+              <span class="stat-val">{{ model_stats.total_encodings }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Unique students</span>
+              <span class="stat-val">{{ model_stats.unique_students }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Model file</span>
+              <span class="stat-val" style="font-size:10px">{{ model_stats.model_path }}</span>
+            </div>
+
+            <div style="margin-top:18px;">
+              <button class="btn btn-sage" id="trainBtn" onclick="startTraining()" style="width:100%;justify-content:center;">
+                🔄 Retrain Model
+              </button>
+            </div>
+
+            <div id="trainProgress" style="display:none;margin-top:12px;">
+              <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+              <div class="progress-label" id="progressLabel">Initialising…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recognition Control -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">◉ Recognition Engine</div>
+            <div class="card-sub">Start or stop face detection</div>
+          </div>
+          <div class="card-body">
+            <div class="stat-row">
+              <span class="stat-label">Status</span>
+              <span class="stat-val" id="recogStatus">
+                {{ '🟢 Running' if recog.running else '⚫ Stopped' }}
+              </span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Frames processed</span>
+              <span class="stat-val" id="framesCount">{{ recog.frames_processed }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Today's count</span>
+              <span class="stat-val" id="todayCount">{{ recog.today_count }}</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:18px;">
+              <button class="btn btn-sage" onclick="controlRecog('start')" style="flex:1;justify-content:center;">▶ Start</button>
+              <button class="btn btn-danger" onclick="controlRecog('stop')" style="flex:1;justify-content:center;">■ Stop</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Log -->
+        <div class="card" style="grid-column:1/-1;">
+          <div class="card-header">
+            <div class="card-title">📋 Activity Log</div>
+            <div class="card-sub">Recent system events</div>
+          </div>
+          <div class="card-body">
+            <div class="log-box" id="logBox">
+              <div class="log-info">[INFO] SmartAttend system ready</div>
+              <div class="log-info">[INFO] Model: {{ model_stats.unique_students }} students loaded</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function addLog(msg, type='info') {
+  const box = document.getElementById('logBox');
+  const div = document.createElement('div');
+  div.className = `log-${type}`;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function startTraining() {
+  document.getElementById('trainBtn').disabled = true;
+  document.getElementById('trainProgress').style.display = 'block';
+  addLog('Training started…', 'info');
+
+  fetch('/api/train', {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        addLog('Training running in background', 'ok');
+        pollTraining();
+      } else {
+        addLog('Error: ' + d.message, 'err');
+        document.getElementById('trainBtn').disabled = false;
+      }
+    });
+}
+
+function pollTraining() {
+  const interval = setInterval(() => {
+    fetch('/api/train_status')
+      .then(r => r.json())
+      .then(d => {
+        const prog = d.progress || '';
+        document.getElementById('progressLabel').textContent = prog;
+
+        if (prog.startsWith('done')) {
+          clearInterval(interval);
+          document.getElementById('progressFill').style.width = '100%';
+          addLog('Training complete! ✓', 'ok');
+          document.getElementById('trainBtn').disabled = false;
+        } else if (prog.startsWith('error')) {
+          clearInterval(interval);
+          addLog('Training error: ' + prog, 'err');
+          document.getElementById('trainBtn').disabled = false;
+        } else {
+          // Animate progress bar
+          const fill = document.getElementById('progressFill');
+          const cur  = parseInt(fill.style.width) || 0;
+          if (cur < 90) fill.style.width = (cur + 5) + '%';
+        }
+      });
+  }, 1500);
+}
+
+function controlRecog(action) {
+  fetch('/api/recognition/' + action, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      addLog(`Recognition ${action}ed (${d.status || d.message || ''})`,
+             action === 'start' ? 'ok' : 'info');
+      setTimeout(pollStatus, 500);
+    });
+}
+
+function pollStatus() {
+  fetch('/api/live_status')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('recogStatus').textContent = d.running ? '🟢 Running' : '⚫ Stopped';
+      document.getElementById('framesCount').textContent  = d.frames;
+      document.getElementById('todayCount').textContent   = d.today_count;
+    });
+}
+setInterval(pollStatus, 5000);
+</script>
+</body>
+</html>
