@@ -3,179 +3,215 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartAttend — Attendance</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>SmartAttend - Attendance Records</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#f7f4ef; --bg-card:#ffffff; --bg-soft:#f0ebe3;
-  --navy:#1a2540; --navy-lt:#2c3e6b; --sage:#4a7c59; --sage-lt:#6aab80;
-  --amber:#c97d2f; --crimson:#b03030;
-  --text:#1a2540; --text-sec:#5a6680; --text-dim:#9aa3b5;
-  --border:#ddd8cf; --shadow:0 2px 16px rgba(26,37,64,0.08);
-  --radius:10px;
-  --font-serif:'Playfair Display',Georgia,serif;
-  --font-sans:'DM Sans',system-ui,sans-serif;
-  --font-mono:'JetBrains Mono',monospace;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;}
-.layout{display:flex;min-height:100vh;}
-.sidebar{width:240px;flex-shrink:0;background:var(--navy);position:sticky;top:0;height:100vh;overflow-y:auto;}
-.sidebar-brand{padding:28px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.brand-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--sage),var(--sage-lt));display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:22px;}
-.brand-name{font-family:var(--font-serif);font-size:19px;font-weight:700;color:#fff;}
-.brand-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
-.nav-section{padding:18px 14px 6px;}
-.nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:0 8px;margin-bottom:4px;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.18s;}
-.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
-.nav-item.active{background:rgba(106,171,128,0.25);color:#7dcc96;border-left:3px solid var(--sage-lt);}
-.nav-item .icon{font-size:16px;width:20px;text-align:center;}
-.main{flex:1;display:flex;flex-direction:column;}
-.topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
-.topbar-title{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--navy);}
-.topbar-right{display:flex;align-items:center;gap:12px;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:500;border:none;transition:all 0.18s;text-decoration:none;}
-.btn-primary{background:var(--navy);color:#fff;}
-.btn-primary:hover{background:var(--navy-lt);}
-.btn-sage{background:var(--sage);color:#fff;}
-.btn-sage:hover{background:var(--sage-lt);}
-.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border);}
-.btn-ghost:hover{background:var(--bg-soft);}
-.btn-sm{padding:6px 14px;font-size:12px;}
-.content{padding:24px 28px;flex:1;}
-.filter-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);}
-.filter-bar label{font-size:12px;font-weight:500;color:var(--text-sec);flex-shrink:0;}
-.filter-bar input[type=date]{padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-sans);font-size:13px;color:var(--text);background:var(--bg-soft);outline:none;}
-.filter-bar input[type=date]:focus{border-color:var(--navy);}
-.kpi-row{display:flex;gap:14px;margin-bottom:20px;}
-.kpi-chip{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;flex:1;box-shadow:var(--shadow);}
-.kpi-chip-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:2px;}
-.kpi-chip-val{font-family:var(--font-serif);font-size:26px;font-weight:700;color:var(--navy);}
-.table-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
-.table-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.table-title{font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--navy);}
-.att-table{width:100%;border-collapse:collapse;}
-.att-table th{padding:10px 16px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);background:var(--bg-soft);font-weight:600;border-bottom:1px solid var(--border);}
-.att-table td{padding:10px 16px;border-bottom:1px solid rgba(221,216,207,0.5);font-size:13px;color:var(--text-sec);}
-.att-table tr:last-child td{border-bottom:none;}
-.att-table tr:hover td{background:var(--bg-soft);}
-.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:600;}
-.badge-present{background:rgba(74,124,89,0.12);color:var(--sage);border:1px solid rgba(74,124,89,0.2);}
-.badge-year{background:rgba(26,37,64,0.08);color:var(--navy);border:1px solid var(--border);}
-.conf-bar{width:60px;height:5px;background:var(--bg-soft);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:5px;}
-.conf-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--sage-lt));border-radius:3px;}
-::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-.empty-state{text-align:center;padding:48px 20px;color:var(--text-dim);}
-.empty-icon{font-size:40px;margin-bottom:12px;}
+:root{--bg:#f6f1e8;--card:#fff;--soft:#ece4d8;--ink:#1b2440;--muted:#5f6982;--nav:#17233f;--line:#d7cfbf;--sage:#46785a;--amber:#c47a2b;--red:#b13d3d;--shadow:0 12px 32px rgba(27,36,64,.08);--r:18px;--serif:'Playfair Display',serif;--sans:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--ink);font-family:var(--sans)}a{text-decoration:none;color:inherit}.layout{display:flex;min-height:100vh}.sidebar{width:244px;background:linear-gradient(180deg,var(--nav),#11192f);color:#fff;padding:24px 18px;display:flex;flex-direction:column;gap:24px}.brand{border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:20px}.brand-mark{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--sage),#79ae83);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-weight:700}.brand-name{font-family:var(--serif);font-size:24px}.brand-sub{margin-top:4px;font-size:12px;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase}.nav-label{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.14em;text-transform:uppercase;padding:0 10px 8px}.nav-item{display:block;padding:11px 12px;border-radius:12px;color:rgba(255,255,255,.7);font-weight:500}.nav-item:hover,.nav-item.active{background:rgba(255,255,255,.08);color:#fff}
+.main{flex:1;padding:24px 28px}.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}.title h1{font-family:var(--serif);font-size:34px;line-height:1.05}.title p{margin-top:8px;color:var(--muted);max-width:760px}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.btn{border:none;border-radius:12px;padding:11px 16px;font-family:var(--sans);font-weight:700;cursor:pointer}.btn-primary{background:var(--nav);color:#fff}.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.stack{display:flex;flex-direction:column;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}.card-body{padding:20px}.filters{display:grid;grid-template-columns:1fr 1fr auto;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}.field input,.field select{height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 14px;outline:none}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.kpi{padding:20px}.kpi-label{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.kpi-value{font-family:var(--serif);font-size:38px;line-height:1;margin-top:10px}.kpi-sub{margin-top:10px;font-size:13px;color:var(--muted)}
+.section-title{font-family:var(--serif);font-size:24px}.section-sub{margin-top:6px;color:var(--muted);font-size:14px}.session-highlight{margin-top:14px;padding:14px;border-radius:14px;background:var(--soft);color:var(--ink)}
+.live-note{display:none;margin-top:14px;padding:14px;border-radius:14px;background:rgba(70,120,90,.12);color:var(--sage);font-weight:700}.live-note.show{display:block}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left}th{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}tr:last-child td{border-bottom:none}.mono{font-family:var(--mono);font-size:12px}.empty{padding:26px;text-align:center;color:var(--muted)}
+@media (max-width:1100px){.grid4,.filters{grid-template-columns:1fr}}@media (max-width:920px){.layout{display:block}.sidebar{width:auto}.main{padding:18px}}@media (max-width:640px){.topbar,.actions{flex-direction:column;align-items:stretch}.title h1{font-size:28px}}
 </style>
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">🎓</div>
+    <div class="brand">
+      <div class="brand-mark">A</div>
       <div class="brand-name">SmartAttend</div>
-      <div class="brand-sub">Face Recognition System</div>
+      <div class="brand-sub">{{ program_name }} attendance view</div>
     </div>
-    <div class="nav-section">
+    <div>
       <div class="nav-label">Main</div>
-      <a class="nav-item" href="/"><span class="icon">⊞</span> Dashboard</a>
-      <a class="nav-item" href="/live"><span class="icon">◉</span> Live Camera</a>
-      <a class="nav-item active" href="/attendance"><span class="icon">☑</span> Attendance</a>
-      <a class="nav-item" href="/students"><span class="icon">◈</span> Students</a>
+      <a class="nav-item" href="/">Dashboard</a>
+      <a class="nav-item" href="/live">Live Camera</a>
+      <a class="nav-item active" href="/attendance">Attendance</a>
+      <a class="nav-item" href="/students">Students</a>
     </div>
-    <div class="nav-section">
+    <div>
       <div class="nav-label">Admin</div>
-      <a class="nav-item" href="/register"><span class="icon">⊕</span> Register Student</a>
-      <a class="nav-item" href="/admin"><span class="icon">⚙</span> System Admin</a>
+      <a class="nav-item" href="/register">Register Student</a>
+      <a class="nav-item" href="/admin">System Admin</a>
     </div>
   </aside>
-
-  <div class="main">
+  <main class="main">
     <div class="topbar">
-      <div class="topbar-title">Attendance Records</div>
-      <div class="topbar-right">
-        <a class="btn btn-ghost btn-sm" href="/download/attendance?date={{ selected_date }}">↓ Download CSV</a>
-        <a class="btn btn-primary btn-sm" href="/logout">Sign Out</a>
+      <div class="title">
+        <h1>Attendance Records</h1>
+        <p>Review all daily records or filter a specific class session by branch, year, and room.</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ghost" href="/download/attendance?date={{ selected_date }}{% if selected_session_id %}&session={{ selected_session_id }}{% endif %}">Download CSV</a>
+        <a class="btn btn-primary" href="/logout">Sign Out</a>
       </div>
     </div>
 
-    <div class="content">
-      <!-- Filter -->
-      <div class="filter-bar">
-        <label>Date:</label>
-        <input type="date" id="dateFilter" value="{{ selected_date }}"
-               onchange="window.location='/attendance?date='+this.value">
-        <button class="btn btn-ghost btn-sm"
-                onclick="document.getElementById('dateFilter').value=new Date().toISOString().split('T')[0];window.location='/attendance'">
-          Today
-        </button>
-      </div>
+    <div class="stack">
+      <section class="card"><div class="card-body">
+        <div class="filters">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="dateFilter" value="{{ selected_date }}" onchange="applyFilters()">
+          </div>
+          <div class="field">
+            <label>Class Session</label>
+            <select id="sessionFilter" onchange="applyFilters()">
+              <option value="">All classes</option>
+              {% for session in sessions %}
+              <option value="{{ session.id }}" {% if selected_session_id == session.id %}selected{% endif %}>{{ session.display_label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Quick Action</label>
+            <button class="btn btn-ghost" type="button" onclick="window.location='/attendance'">Today</button>
+          </div>
+        </div>
+        {% if selected_session %}
+        <div class="session-highlight"><strong>{{ selected_session.display_label }}</strong><div class="section-sub">Room {{ selected_session.room }}{% if selected_session.subject %} | {{ selected_session.subject }}{% endif %} | {{ selected_session.attendance_count }} records in this class session</div></div>
+        {% endif %}
+        <div class="live-note" id="liveMarkedNote">Latest attendance marked: <span id="liveMarkedText">-</span></div>
+      </div></section>
 
-      <!-- KPIs -->
-      <div class="kpi-row">
-        <div class="kpi-chip">
-          <div class="kpi-chip-label">Total Students</div>
-          <div class="kpi-chip-val">{{ summary.total_students }}</div>
-        </div>
-        <div class="kpi-chip">
-          <div class="kpi-chip-label">Present</div>
-          <div class="kpi-chip-val" style="color:var(--sage)">{{ summary.present }}</div>
-        </div>
-        <div class="kpi-chip">
-          <div class="kpi-chip-label">Absent</div>
-          <div class="kpi-chip-val" style="color:var(--crimson)">{{ summary.absent }}</div>
-        </div>
-        <div class="kpi-chip">
-          <div class="kpi-chip-label">Attendance %</div>
-          <div class="kpi-chip-val" style="color:var(--amber)">{{ summary.attendance_pct }}%</div>
-        </div>
-      </div>
+      <section class="grid4">
+        <div class="card kpi"><div class="kpi-label">Scope Size</div><div class="kpi-value" id="kpiTotal">{{ summary.total_students }}</div><div class="kpi-sub">{% if selected_session %}Students in the selected batch{% else %}Total registered students{% endif %}</div></div>
+        <div class="card kpi"><div class="kpi-label">Present</div><div class="kpi-value" id="kpiPresent" style="color:var(--sage)">{{ summary.present }}</div><div class="kpi-sub">{% if selected_session %}Marked in this class{% else %}Unique students marked on this date{% endif %}</div></div>
+        <div class="card kpi"><div class="kpi-label">Absent</div><div class="kpi-value" id="kpiAbsent" style="color:var(--red)">{{ summary.absent }}</div><div class="kpi-sub">{% if selected_session %}Missing from this class{% else %}Students without any mark on this date{% endif %}</div></div>
+        <div class="card kpi"><div class="kpi-label">Attendance %</div><div class="kpi-value" id="kpiPct" style="color:var(--amber)">{{ summary.attendance_pct }}%</div><div class="kpi-sub">{% if selected_session %}Selected class session{% else %}Daily unique attendance{% endif %}</div></div>
+      </section>
 
-      <!-- Table -->
-      <div class="table-card">
-        <div class="table-header">
-          <div class="table-title">{{ selected_date }} — {{ records|length }} Records</div>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="att-table">
+      <section class="card"><div class="card-body">
+        <div class="section-title" id="recordsTitle">{{ selected_date }} - {{ records|length }} records</div>
+        <div class="section-sub">{% if selected_session %}Filtered by a single running class session.{% else %}Showing all class records for the selected date.{% endif %}</div>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
             <thead>
               <tr>
-                <th>#</th><th>Student ID</th><th>Name</th>
-                <th>Department</th><th>Year</th><th>Time</th><th>Confidence</th>
+                <th>#</th>
+                <th>Student</th>
+                <th>Branch</th>
+                <th>Year</th>
+                <th>Room</th>
+                <th>Subject</th>
+                <th>Session</th>
+                <th>Time</th>
+                <th>Confidence</th>
               </tr>
             </thead>
-            <tbody>
-              {% for r in records %}
+            <tbody id="recordsBody">
+              {% for item in records %}
               <tr>
-                <td style="font-family:var(--font-mono);color:var(--text-dim)">{{ loop.index }}</td>
-                <td style="font-family:var(--font-mono);font-size:12px">{{ r.student_id }}</td>
-                <td style="font-weight:600;color:var(--text)">{{ r.name }}</td>
-                <td>{{ r.department or '—' }}</td>
-                <td><span class="badge badge-year">Year {{ r.year }}</span></td>
-                <td style="font-family:var(--font-mono);font-size:12px">{{ r.time }}</td>
-                <td>
-                  <div class="conf-bar"><div class="conf-fill" style="width:{{ (r.confidence * 100)|round }}%"></div></div>
-                  <span style="font-family:var(--font-mono);font-size:11px">{{ '%.0f'|format(r.confidence*100) }}%</span>
-                </td>
+                <td class="mono">{{ loop.index }}</td>
+                <td><div>{{ item.name }}</div><div class="mono">{{ item.student_id }}</div></td>
+                <td>{{ item.department or '-' }}</td>
+                <td>{{ item.year or '-' }}</td>
+                <td>{{ item.room or '-' }}</td>
+                <td>{{ item.subject or '-' }}</td>
+                <td>{{ item.session_label }}</td>
+                <td class="mono">{{ item.time }}</td>
+                <td class="mono">{{ '%.0f'|format(item.confidence * 100) }}%</td>
               </tr>
               {% else %}
-              <tr>
-                <td colspan="7">
-                  <div class="empty-state">
-                    <div class="empty-icon">📋</div>
-                    No attendance records for {{ selected_date }}
-                  </div>
-                </td>
-              </tr>
+              <tr><td colspan="9" class="empty">No attendance records found for this filter.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </div>
+      </div></section>
     </div>
-  </div>
+  </main>
 </div>
+<script>
+const selectedDate='{{ selected_date }}';
+const selectedSessionId='{{ selected_session_id or "" }}';
+let latestMarkedToken=null;
+let hydrated=false;
+
+function applyFilters(){
+  const date=document.getElementById('dateFilter').value;
+  const session=document.getElementById('sessionFilter').value;
+  const params=new URLSearchParams();
+  if(date) params.set('date',date);
+  if(session) params.set('session',session);
+  window.location=`/attendance?${params.toString()}`;
+}
+
+function isTodayView(){
+  const now=new Date();
+  const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  return selectedDate===today;
+}
+
+function renderRecords(records){
+  const body=document.getElementById('recordsBody');
+  const title=document.getElementById('recordsTitle');
+  title.textContent=`${selectedDate} - ${records.length} records`;
+  if(!records.length){
+    body.innerHTML='<tr><td colspan="9" class="empty">No attendance records found for this filter.</td></tr>';
+    return;
+  }
+  body.innerHTML=records.map((item,index)=>`<tr><td class="mono">${index+1}</td><td><div>${item.name}</div><div class="mono">${item.student_id}</div></td><td>${item.department||'-'}</td><td>${item.year||'-'}</td><td>${item.room||'-'}</td><td>${item.subject||'-'}</td><td>${item.session_label||'-'}</td><td class="mono">${item.time||'-'}</td><td class="mono">${Math.round((item.confidence||0)*100)}%</td></tr>`).join('');
+}
+
+function renderSummary(summary){
+  if(!summary) return;
+  document.getElementById('kpiTotal').textContent=summary.total_students ?? 0;
+  document.getElementById('kpiPresent').textContent=summary.present ?? 0;
+  document.getElementById('kpiAbsent').textContent=summary.absent ?? 0;
+  document.getElementById('kpiPct').textContent=`${summary.attendance_pct ?? 0}%`;
+}
+
+function fetchJson(url){
+  return fetch(url).then(async response=>{
+    const data=await response.json();
+    if(!response.ok) throw new Error(data.message||'Request failed');
+    return data;
+  });
+}
+
+function updateMarkedNote(data){
+  const note=document.getElementById('liveMarkedNote');
+  const text=document.getElementById('liveMarkedText');
+  const token=data.last_marked_name&&data.last_marked_time?`${data.last_marked_name}|${data.last_marked_time}`:null;
+  if(data.last_marked_name){
+    note.classList.add('show');
+    text.textContent=`${data.last_marked_name} at ${data.last_marked_time||''}`;
+  }
+  if(hydrated&&token&&token!==latestMarkedToken){
+    note.classList.add('show');
+  }
+  latestMarkedToken=token||latestMarkedToken;
+  hydrated=true;
+}
+
+function pollLiveAttendance(){
+  if(!isTodayView()) return;
+
+  const params=new URLSearchParams({date:selectedDate});
+  if(selectedSessionId) params.set('session',selectedSessionId);
+
+  fetchJson(`/api/attendance?${params.toString()}`)
+    .then(data=>{
+      renderRecords(data.records||[]);
+      renderSummary(data.summary);
+    })
+    .catch(()=>{});
+
+  fetchJson('/api/live_status')
+    .then(data=>{
+      updateMarkedNote(data);
+    })
+    .catch(()=>{});
+}
+
+pollLiveAttendance();
+setInterval(pollLiveAttendance,3000);
+</script>
 </body>
 </html>

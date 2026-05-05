@@ -2,112 +2,159 @@
 =============================================================================
   SmartAttend Attendance Manager
 =============================================================================
-  Central business logic for marking, querying, and exporting attendance.
-
-  DUPLICATE PREVENTION
-  ─────────────────────────────────────────────────────────────────────────
-  Each recognition event passes through mark_attendance().
-  The DB has a UNIQUE constraint on (student_id, date), so any duplicate
-  INSERT silently fails (INSERT OR IGNORE).  Additionally, we maintain an
-  in-memory set `_today_marked` for O(1) lookups before hitting the DB
-  — this prevents hammering the database for every camera frame.
+  Central business logic for class-session attendance.
 =============================================================================
 """
 
+from __future__ import annotations
+
 import csv
-import os
 import io
 import logging
-from datetime import datetime, date
-from typing import List, Optional, Dict
-from pathlib import Path
+import os
+from datetime import date, datetime
+from typing import Dict, List, Optional
 
 from database.db_manager import DBManager
 
 logger = logging.getLogger("smartattend.attendance")
 
-CONFIDENCE_THRESHOLD = float(os.environ.get("ATTEND_MIN_CONF", "0.40"))
+CONFIDENCE_THRESHOLD = float(
+    os.environ.get("ATTEND_MIN_CONF", os.environ.get("FACE_MIN_CONF", "0.35"))
+)
 
 
 class AttendanceManager:
     """Manages all attendance operations."""
 
     def __init__(self, db: DBManager):
-        self.db            = db
-        self._today_marked = set()          # student_ids already marked today
-        self._last_refresh = date.min       # last time we refreshed the set
-        self._refresh_today_set()
+        self.db = db
+        self._session_marked: Dict[int, set[str]] = {}
+        self._cache_day = date.today()
 
-    # ── Mark Attendance ───────────────────────────────────────────────────
+    # Mark attendance ------------------------------------------------------
 
     def mark_attendance(self, student_id: str, name: str,
-                        confidence: float) -> Dict:
+                        confidence: float,
+                        active_session: Optional[Dict] = None) -> Dict:
         """
         Attempt to mark attendance for a recognised student.
 
         Returns dict with:
-            status   : "marked" | "duplicate" | "low_confidence" | "unknown"
-            message  : human-readable string
-            record   : the attendance row (if marked or duplicate)
+            status  : marked | duplicate | low_confidence | unknown
+                      | no_active_session | not_in_session
+            message : human-readable text
+            record  : the attendance row when available
         """
-        # Refresh the in-memory set if date has changed (midnight rollover)
-        today = date.today()
-        if today != self._last_refresh:
-            self._refresh_today_set()
-            self._last_refresh = today
+        self._reset_cache_if_needed()
 
-        # Unknown faces
         if not student_id:
+            logger.info("Attendance rejected: unknown face")
             return {"status": "unknown", "message": "Unknown face", "record": None}
 
-        # Low confidence
         if confidence < CONFIDENCE_THRESHOLD:
+            logger.info(
+                "Attendance rejected: confidence %.3f below threshold %.3f",
+                confidence,
+                CONFIDENCE_THRESHOLD,
+            )
             return {
-                "status":  "low_confidence",
+                "status": "low_confidence",
                 "message": f"Confidence {confidence:.0%} below threshold",
-                "record":  None,
+                "record": None,
             }
 
-        # Duplicate check (fast in-memory)
-        if student_id in self._today_marked:
-            record = self.db.get_today_record(student_id)
+        if not active_session or not active_session.get("id"):
+            logger.info("Attendance rejected for %s (%s): no active session", name, student_id)
             return {
-                "status":  "duplicate",
-                "message": f"{name} already marked today",
-                "record":  record,
+                "status": "no_active_session",
+                "message": "Start the running class session before marking attendance",
+                "record": None,
             }
 
-        # Mark in DB
+        student = self.db.get_student(student_id)
+        if not student:
+            logger.info("Attendance rejected for %s (%s): student not found", name, student_id)
+            return {"status": "unknown", "message": "Student not found", "record": None}
+
+        if (
+            student.get("department") != active_session.get("department")
+            or int(student.get("year") or 0) != int(active_session.get("year") or 0)
+        ):
+            logger.info(
+                "Attendance rejected for %s (%s): student batch=%s year=%s session batch=%s year=%s",
+                name,
+                student_id,
+                student.get("department"),
+                student.get("year"),
+                active_session.get("department"),
+                active_session.get("year"),
+            )
+            return {
+                "status": "not_in_session",
+                "message": f"{name} does not belong to {active_session['batch_label']}",
+                "record": None,
+            }
+
+        session_id = int(active_session["id"])
+        marked_ids = self._get_marked_set(session_id)
+        if student_id in marked_ids:
+            record = self.db.get_session_record(session_id, student_id)
+            logger.info(
+                "Attendance duplicate: %s (%s) already marked in session %s",
+                name,
+                student_id,
+                session_id,
+            )
+            return {
+                "status": "duplicate",
+                "message": f"{name} already marked in this class",
+                "record": record,
+            }
+
         now = datetime.now()
         record = self.db.insert_attendance(
-            student_id = student_id,
-            name       = name,
-            date_str   = now.strftime("%Y-%m-%d"),
-            time_str   = now.strftime("%H:%M:%S"),
-            confidence = round(confidence, 4),
+            student_id=student_id,
+            session_id=session_id,
+            name=name,
+            date_str=now.strftime("%Y-%m-%d"),
+            time_str=now.strftime("%H:%M:%S"),
+            confidence=round(confidence, 4),
         )
 
         if record:
-            self._today_marked.add(student_id)
-            logger.info("Attendance marked: %s (%s) @ %s — confidence %.0f%%",
-                        name, student_id, now.strftime("%H:%M:%S"),
-                        confidence * 100)
-            return {"status": "marked", "message": f"{name} marked present", "record": record}
+            marked_ids.add(student_id)
+            logger.info(
+                "Attendance marked: %s (%s) in session %s @ %s - confidence %.0f%%",
+                name,
+                student_id,
+                session_id,
+                now.strftime("%H:%M:%S"),
+                confidence * 100,
+            )
+            return {
+                "status": "marked",
+                "message": f"{name} marked present in {active_session['display_label']}",
+                "record": record,
+            }
 
-        # INSERT OR IGNORE fired — already in DB (edge case)
         return {
-            "status":  "duplicate",
-            "message": f"{name} already marked today",
-            "record":  self.db.get_today_record(student_id),
+            "status": "duplicate",
+            "message": f"{name} already marked in this class",
+            "record": self.db.get_session_record(session_id, student_id),
         }
 
-    # ── Query ─────────────────────────────────────────────────────────────
+    # Queries --------------------------------------------------------------
 
-    def get_today_attendance(self) -> List[Dict]:
-        return self.db.get_attendance_by_date(date.today().strftime("%Y-%m-%d"))
+    def get_today_attendance(self, session_id: Optional[int] = None) -> List[Dict]:
+        return self.db.get_attendance_by_date(
+            date.today().strftime("%Y-%m-%d"),
+            session_id=session_id,
+        )
 
-    def get_attendance_by_date(self, date_str: str) -> List[Dict]:
-        return self.db.get_attendance_by_date(date_str)
+    def get_attendance_by_date(self, date_str: str,
+                               session_id: Optional[int] = None) -> List[Dict]:
+        return self.db.get_attendance_by_date(date_str, session_id=session_id)
 
     def get_attendance_range(self, start: str, end: str) -> List[Dict]:
         return self.db.get_attendance_range(start, end)
@@ -115,43 +162,57 @@ class AttendanceManager:
     def get_student_history(self, student_id: str) -> List[Dict]:
         return self.db.get_student_attendance(student_id)
 
-    def get_summary(self, date_str: Optional[str] = None) -> Dict:
-        """Return KPI summary for a given date (defaults to today)."""
+    def get_summary(self, date_str: Optional[str] = None,
+                    session_id: Optional[int] = None) -> Dict:
+        if session_id:
+            return self._get_session_summary(session_id)
+
         if date_str is None:
             date_str = date.today().strftime("%Y-%m-%d")
 
         total_students = self.db.count_students()
-        present_today  = len(self.db.get_attendance_by_date(date_str))
+        present_today = self.db.count_present_students_by_date(date_str)
         pct = (present_today / total_students * 100) if total_students else 0
 
         return {
-            "date":             date_str,
-            "total_students":   total_students,
-            "present":          present_today,
-            "absent":           total_students - present_today,
-            "attendance_pct":   round(pct, 1),
+            "scope": "day",
+            "date": date_str,
+            "total_students": total_students,
+            "present": present_today,
+            "absent": max(total_students - present_today, 0),
+            "attendance_pct": round(pct, 1),
         }
 
     def get_weekly_trend(self) -> List[Dict]:
-        """Last 7 days attendance count — for trend chart."""
         return self.db.get_weekly_trend()
 
     def search_student(self, query: str) -> List[Dict]:
         return self.db.search_students(query)
 
-    # ── Export ────────────────────────────────────────────────────────────
+    # Export ---------------------------------------------------------------
 
-    def export_csv(self, date_str: Optional[str] = None) -> str:
-        """Return CSV string of attendance for a given date."""
+    def export_csv(self, date_str: Optional[str] = None,
+                   session_id: Optional[int] = None) -> str:
         records = (
-            self.get_today_attendance()
+            self.get_today_attendance(session_id=session_id)
             if date_str is None
-            else self.get_attendance_by_date(date_str)
+            else self.get_attendance_by_date(date_str, session_id=session_id)
         )
         buf = io.StringIO()
         writer = csv.DictWriter(
             buf,
-            fieldnames=["student_id", "name", "date", "time", "confidence"],
+            fieldnames=[
+                "student_id",
+                "name",
+                "department",
+                "year",
+                "date",
+                "time",
+                "room",
+                "subject",
+                "session_label",
+                "confidence",
+            ],
             extrasaction="ignore",
         )
         writer.writeheader()
@@ -159,24 +220,73 @@ class AttendanceManager:
         return buf.getvalue()
 
     def export_range_csv(self, start: str, end: str) -> str:
-        """Export a date range as CSV."""
         records = self.get_attendance_range(start, end)
         buf = io.StringIO()
         writer = csv.DictWriter(
             buf,
-            fieldnames=["student_id", "name", "date", "time", "confidence"],
+            fieldnames=[
+                "student_id",
+                "name",
+                "department",
+                "year",
+                "date",
+                "time",
+                "room",
+                "subject",
+                "session_label",
+                "confidence",
+            ],
             extrasaction="ignore",
         )
         writer.writeheader()
         writer.writerows(records)
         return buf.getvalue()
 
-    # ── Internal ──────────────────────────────────────────────────────────
+    # Internal -------------------------------------------------------------
 
-    def _refresh_today_set(self):
-        today_str = date.today().strftime("%Y-%m-%d")
-        records   = self.db.get_attendance_by_date(today_str)
-        self._today_marked = {r["student_id"] for r in records}
-        self._last_refresh = date.today()
-        logger.debug("Today-set refreshed: %d students already marked",
-                     len(self._today_marked))
+    def clear_session_cache(self, session_id: Optional[int] = None):
+        if session_id is None:
+            self._session_marked.clear()
+            return
+        self._session_marked.pop(int(session_id), None)
+
+    def _get_session_summary(self, session_id: int) -> Dict:
+        session = self.db.get_session(session_id)
+        if not session:
+            return {
+                "scope": "session",
+                "date": date.today().strftime("%Y-%m-%d"),
+                "total_students": 0,
+                "present": 0,
+                "absent": 0,
+                "attendance_pct": 0.0,
+                "session": None,
+            }
+
+        total_students = self.db.count_students_for_batch(
+            session["department"],
+            session["year"],
+        )
+        present = self.db.count_attendance_for_session(session_id)
+        pct = (present / total_students * 100) if total_students else 0
+        return {
+            "scope": "session",
+            "date": session["session_date"],
+            "total_students": total_students,
+            "present": present,
+            "absent": max(total_students - present, 0),
+            "attendance_pct": round(pct, 1),
+            "session": session,
+        }
+
+    def _reset_cache_if_needed(self):
+        today = date.today()
+        if today != self._cache_day:
+            self._session_marked.clear()
+            self._cache_day = today
+
+    def _get_marked_set(self, session_id: int) -> set[str]:
+        if session_id not in self._session_marked:
+            records = self.db.get_session_attendance(session_id)
+            self._session_marked[session_id] = {r["student_id"] for r in records}
+        return self._session_marked[session_id]

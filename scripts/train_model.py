@@ -28,6 +28,9 @@ if __name__ == "__main__":
         print(f"✓  {result['message']}")
         print(f"   Images processed : {stats['encoded']}/{stats['total_images']}")
         print(f"   Failed            : {stats['failed']}")
+        print(f"   Quality skips     : {stats.get('skipped_quality', 0)}")
+        print(f"   Duplicate skips   : {stats.get('skipped_duplicate', 0)}")
+        print(f"   Cap skips         : {stats.get('skipped_cap', 0)}")
         print(f"   Time              : {stats['elapsed_seconds']}s")
     else:
         print(f"✗  {result['message']}")

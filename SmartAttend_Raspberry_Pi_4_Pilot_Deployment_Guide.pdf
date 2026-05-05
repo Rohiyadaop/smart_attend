@@ -1,0 +1,1001 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 1923 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+(SMARTATTEND PILOT DEPLOYMENT GUIDE FOR RASPBERRY PI 4) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Prepared for pilot deployment in a college classroom or lab.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(1. Pilot deployment goal) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(This pilot setup is for:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- one Raspberry Pi 4) Tj
+0 -15 Td
+(- one camera) Tj
+0 -15 Td
+(- one classroom, lab, or entry point) Tj
+0 -15 Td
+(- local web dashboard for teacher/admin use) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Use the pilot first before full college-wide deployment.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(2. Recommended hardware) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- Raspberry Pi 4 Model B, 4 GB or 8 GB RAM) Tj
+0 -15 Td
+(- 32 GB or larger microSD card, Class 10) Tj
+0 -15 Td
+(- Official Raspberry Pi power adapter) Tj
+0 -15 Td
+(- Raspberry Pi Camera Module or a supported USB webcam) Tj
+0 -15 Td
+(- Ethernet connection preferred over Wi-Fi) Tj
+0 -15 Td
+(- Monitor, keyboard, and mouse for first-time setup) Tj
+0 -15 Td
+(- Optional: case, heatsink, cooling fan, UPS backup) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(3. Before you start) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Keep these ready:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- admin username and password) Tj
+0 -15 Td
+(- classroom name or room number) Tj
+0 -15 Td
+(- list of students with roll numbers) Tj
+0 -15 Td
+(- 5 to 10 face images per student if you want to pre-train) Tj
+0 -15 Td
+(- permission from HOD or college authority for pilot use) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(4. Install Raspberry Pi OS) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(1. Flash Raspberry Pi OS 64-bit using Raspberry Pi Imager.) Tj
+0 -15 Td
+(2. Boot the Raspberry Pi 4.) Tj
+0 -15 Td
+(3. Complete the first-time setup.) Tj
+0 -15 Td
+(4. Connect the Pi to the college LAN using Ethernet if possible.) Tj
+0 -15 Td
+(5. Open terminal and update the system.) Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 1 of 9) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 1378 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    sudo apt update) Tj
+0 -15 Td
+(    sudo apt upgrade -y) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(5. Enable camera) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(If using Raspberry Pi Camera Module:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    sudo raspi-config) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Then:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- Interface Options) Tj
+0 -15 Td
+(- Camera) Tj
+0 -15 Td
+(- Enable) Tj
+0 -15 Td
+(- Reboot) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(After reboot, test camera:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    libcamera-hello) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(If using USB webcam, this step is not required.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(6. Install system packages) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    sudo apt install -y python3-pip python3-venv git cmake build-essential \\) Tj
+0 -15 Td
+(    libboost-all-dev libatlas-base-dev libhdf5-dev python3-picamera2) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(If you are using USB webcam only, `python3-picamera2` is optional.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(7. Clone project and create virtual environment) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    git clone <your-repository-url>) Tj
+0 -15 Td
+(    cd smartattend) Tj
+0 -15 Td
+(    python3 -m venv venv) Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 2 of 9) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 1530 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+(    source venv/bin/activate) Tj
+0 -15 Td
+(    pip install --upgrade pip) Tj
+0 -15 Td
+(    pip install -r requirements.txt) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(8. Install dlib / face-recognition dependencies) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(On Raspberry Pi, `dlib` may take time to install.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    pip install dlib) Tj
+0 -15 Td
+(    pip install face-recognition) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(If `dlib` build fails, use a compatible wheel for your Pi OS and Python version.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(9. Configure SmartAttend environment) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Set environment variables before running:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    export ADMIN_USER=admin) Tj
+0 -15 Td
+(    export ADMIN_PASS=ChangeThisNow) Tj
+0 -15 Td
+(    export CAMERA=picamera2) Tj
+0 -15 Td
+(    export GPIO=false) Tj
+0 -15 Td
+(    export SECRET_KEY=change-this-secret-key) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(If using USB webcam:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    export CAMERA=opencv) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(For permanent setup, place these in the systemd service file later.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(10. Prepare project folders) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(When the app starts, it uses:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- `dataset/`) Tj
+0 -15 Td
+(- `models/`) Tj
+0 -15 Td
+(- `logs/`) Tj
+0 -15 Td
+(- `smartattend.db`) Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 3 of 9) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Length 1365 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+() Tj
+0 -15 Td
+(Make sure your project folder has write permission for the Pi user.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(11. Start the app for first test) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    python app.py) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Open in browser:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    http://<raspberry-pi-ip>:5000) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Login with the admin username and password you configured.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(12. Register students) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(There are two good pilot options:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Option A: register from live camera) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- open the Register Student page) Tj
+0 -15 Td
+(- enter student details) Tj
+0 -15 Td
+(- capture photos from the camera) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Option B: add student folders manually) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Use folder pattern:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    dataset/STUDENTID_Name/) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Example:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    dataset/221340105006_Rudranil_Adhikari/) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Put multiple clear images inside each folder.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(13. Train the face model) Tj
+0 -15 Td
+() Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 4 of 9) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 1698 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+() Tj
+0 -15 Td
+(After registering students:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    python scripts/train_model.py) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Or use the training option from the web admin page.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Confirm that `models/encodings.pkl` is created.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(14. Test pilot in real classroom conditions) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Check all of these before live use:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- camera sees faces clearly) Tj
+0 -15 Td
+(- lighting is even) Tj
+0 -15 Td
+(- room entry angle is good) Tj
+0 -15 Td
+(- student IDs and names are correct) Tj
+0 -15 Td
+(- recognition marks attendance correctly) Tj
+0 -15 Td
+(- year/session filtering works correctly) Tj
+0 -15 Td
+(- individual graph and year graph load correctly) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(15. Recommended camera placement) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- mount at face level, about 1.5 m to 1.7 m height) Tj
+0 -15 Td
+(- avoid strong backlight from windows) Tj
+0 -15 Td
+(- do not point directly into sunlight) Tj
+0 -15 Td
+(- keep the camera stable) Tj
+0 -15 Td
+(- prefer fixed placement near classroom entry or front wall) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(16. Run SmartAttend with Gunicorn) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(For pilot production use:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    source venv/bin/activate) Tj
+0 -15 Td
+(    gunicorn -w 2 -b 0.0.0.0:5000 --timeout 120 app:app) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(This is better than running `python app.py` all the time.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(17. Run on boot using systemd) Tj
+0 -15 Td
+() Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 5 of 9) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Length 1660 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+() Tj
+0 -15 Td
+(Create service file:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    sudo nano /etc/systemd/system/smartattend.service) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Paste this and update paths if needed:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    [Unit]) Tj
+0 -15 Td
+(    Description=SmartAttend Face Recognition System) Tj
+0 -15 Td
+(    After=network.target) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    [Service]) Tj
+0 -15 Td
+(    User=pi) Tj
+0 -15 Td
+(    WorkingDirectory=/home/pi/smartattend) Tj
+0 -15 Td
+(    Environment=PATH=/home/pi/smartattend/venv/bin) Tj
+0 -15 Td
+(    Environment=ADMIN_USER=admin) Tj
+0 -15 Td
+(    Environment=ADMIN_PASS=ChangeThisNow) Tj
+0 -15 Td
+(    Environment=CAMERA=picamera2) Tj
+0 -15 Td
+(    Environment=GPIO=false) Tj
+0 -15 Td
+(    Environment=SECRET_KEY=change-this-secret-key) Tj
+0 -15 Td
+(    ExecStart=/home/pi/smartattend/venv/bin/gunicorn -w 2 -b 0.0.0.0:5000 --timeout) Tj
+0 -15 Td
+(    120 app:app) Tj
+0 -15 Td
+(    Restart=always) Tj
+0 -15 Td
+(    RestartSec=5) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    [Install]) Tj
+0 -15 Td
+(    WantedBy=multi-user.target) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Enable and start:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    sudo systemctl daemon-reload) Tj
+0 -15 Td
+(    sudo systemctl enable smartattend) Tj
+0 -15 Td
+(    sudo systemctl start smartattend) Tj
+0 -15 Td
+(    sudo systemctl status smartattend) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(18. Set a fixed IP) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(For teacher access, avoid changing IP addresses.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(You can:) Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 6 of 9) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Length 1511 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+() Tj
+0 -15 Td
+(- reserve the Pi IP in the college router, or) Tj
+0 -15 Td
+(- configure a static IP on the Pi) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Also set hostname if useful:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    sudo raspi-config) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Then teachers may access using:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    http://smartattend.local:5000) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(if local name resolution works on your network.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(19. Daily operating flow for pilot) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(1. Power on Raspberry Pi.) Tj
+0 -15 Td
+(2. Confirm network is connected.) Tj
+0 -15 Td
+(3. Open SmartAttend dashboard.) Tj
+0 -15 Td
+(4. Start class session.) Tj
+0 -15 Td
+(5. Start recognition.) Tj
+0 -15 Td
+(6. Monitor live camera and attendance marking.) Tj
+0 -15 Td
+(7. Stop session after class.) Tj
+0 -15 Td
+(8. Export attendance CSV if needed.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(20. Backup plan) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Back up these items regularly:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- `smartattend.db`) Tj
+0 -15 Td
+(- `models/encodings.pkl`) Tj
+0 -15 Td
+(- `dataset/`) Tj
+0 -15 Td
+(- `logs/`) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Example backup command:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    mkdir -p ~/smartattend-backups) Tj
+0 -15 Td
+(    cp smartattend.db ~/smartattend-backups/smartattend-$\(date +%F\).db) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 7 of 9) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Length 1482 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+(21. Security and privacy checklist) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- change default admin password) Tj
+0 -15 Td
+(- do not expose the app to the public internet) Tj
+0 -15 Td
+(- keep it on college LAN only) Tj
+0 -15 Td
+(- restrict admin access to authorized staff) Tj
+0 -15 Td
+(- inform students about pilot usage) Tj
+0 -15 Td
+(- follow college data/privacy policy) Tj
+0 -15 Td
+(- keep a manual attendance fallback during pilot) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(22. Troubleshooting) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Camera not working) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    libcamera-hello) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(If that fails, recheck camera cable and camera enable setting.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(USB webcam not detected) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Set:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    export CAMERA=opencv) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(App not opening in browser) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Check service:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(    sudo systemctl status smartattend) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Check whether port 5000 is reachable on LAN.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Face recognition accuracy is low) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- add more images) Tj
+0 -15 Td
+(- improve lighting) Tj
+0 -15 Td
+(- avoid blurry capture) Tj
+0 -15 Td
+(- keep camera steady) Tj
+0 -15 Td
+(- retrain the model) Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 8 of 9) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Length 1376 >>
+stream
+BT
+/F1 11 Tf
+54 778 Td
+() Tj
+0 -15 Td
+(Student graph has no data) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(The graph depends on live presence logging while recognition is running.) Tj
+0 -15 Td
+(Make sure recognition was active for that class/day.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(23. Pilot success criteria) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Your pilot is successful if:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- the device runs for full class hours without crashing) Tj
+0 -15 Td
+(- attendance is marked correctly for most students) Tj
+0 -15 Td
+(- graphs and history are visible to staff) Tj
+0 -15 Td
+(- teachers can export records easily) Tj
+0 -15 Td
+(- false matches stay very low) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(24. Recommended next step after pilot) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(After pilot success, upgrade for department or college use:) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- move from SQLite to PostgreSQL/MySQL) Tj
+0 -15 Td
+(- add teacher-specific login) Tj
+0 -15 Td
+(- add HTTPS and reverse proxy) Tj
+0 -15 Td
+(- add automatic backups) Tj
+0 -15 Td
+(- add central dashboard for multiple rooms) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(25. Final note) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Deploy one classroom first, observe for one or two weeks, then scale.) Tj
+0 -15 Td
+(Pilot deployment is the safest and most practical path for SmartAttend.) Tj
+ET
+BT
+/F1 9 Tf
+54 28 Td
+(Page 9 of 9) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Pages /Count 9 /Kids [12 0 R 13 0 R 14 0 R 15 0 R 16 0 R 17 0 R 18 0 R 19 0 R 20 0 R] >>
+endobj
+12 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+13 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+14 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+15 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+16 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 6 0 R >>
+endobj
+17 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 7 0 R >>
+endobj
+18 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 8 0 R >>
+endobj
+19 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 9 0 R >>
+endobj
+20 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 10 0 R >>
+endobj
+21 0 obj
+<< /Type /Catalog /Pages 11 0 R >>
+endobj
+xref
+0 22
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000002054 00000 n 
+0000003484 00000 n 
+0000005066 00000 n 
+0000006483 00000 n 
+0000008233 00000 n 
+0000009945 00000 n 
+0000011508 00000 n 
+0000013042 00000 n 
+0000014471 00000 n 
+0000014586 00000 n 
+0000014714 00000 n 
+0000014842 00000 n 
+0000014970 00000 n 
+0000015098 00000 n 
+0000015226 00000 n 
+0000015354 00000 n 
+0000015482 00000 n 
+0000015610 00000 n 
+0000015739 00000 n 
+trailer
+<< /Size 22 /Root 21 0 R >>
+startxref
+15790
+%%EOF

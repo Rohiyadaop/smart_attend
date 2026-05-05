@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend - Student Year Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f1e8;--card:#fff;--soft:#ece4d8;--ink:#1b2440;--muted:#5f6982;--nav:#17233f;--line:#d7cfbf;--sage:#46785a;--sage2:#78ab82;--amber:#c47a2b;--shadow:0 12px 32px rgba(27,36,64,.08);--r:18px;--serif:'Playfair Display',serif;--sans:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--ink);font-family:var(--sans)}a{text-decoration:none;color:inherit}
+.layout{display:flex;min-height:100vh}.sidebar{width:244px;background:linear-gradient(180deg,var(--nav),#11192f);color:#fff;padding:24px 18px;display:flex;flex-direction:column;gap:24px}
+.brand{border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:20px}.brand-mark{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--sage),var(--sage2));display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-weight:700}.brand-name{font-family:var(--serif);font-size:24px}.brand-sub{margin-top:4px;font-size:12px;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase}
+.nav-label{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.14em;text-transform:uppercase;padding:0 10px 8px}.nav-item{display:block;padding:11px 12px;border-radius:12px;color:rgba(255,255,255,.7);font-weight:500}.nav-item:hover,.nav-item.active{background:rgba(255,255,255,.08);color:#fff}
+.main{flex:1;padding:24px 28px}.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}.title h1{font-family:var(--serif);font-size:34px;line-height:1.05}.title p{margin-top:8px;color:var(--muted);max-width:760px}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:none;border-radius:12px;padding:11px 16px;font-family:var(--sans);font-weight:700;cursor:pointer}.btn-primary{background:var(--nav);color:#fff}.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}.btn-sage{background:var(--sage);color:#fff}
+.stack{display:flex;flex-direction:column;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}.card-body{padding:20px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}
+.kpi{padding:20px}.kpi-label{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.kpi-value{font-family:var(--serif);font-size:38px;line-height:1;margin-top:10px}.kpi-sub{margin-top:10px;font-size:13px;color:var(--muted)}
+.section-title{font-family:var(--serif);font-size:24px}.section-sub{margin-top:6px;color:var(--muted);font-size:14px}.toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-top:18px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}.field input,.field select{height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 14px;outline:none}
+.chart-wrap{margin-top:18px;padding:16px;border-radius:18px;background:linear-gradient(180deg,#fbf8f2,#f2ebde);border:1px solid var(--line)}.chart-box{position:relative;min-height:420px}.chart-hint{margin-top:12px;color:var(--muted);font-size:13px}
+.list{display:flex;flex-direction:column;gap:12px}.student-item{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:14px;border-radius:14px;border:1px solid var(--line);background:#fff}.student-item:hover{background:#fbf8f2}.student-main strong{display:block}.student-main .mono{margin-top:4px}.student-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;color:var(--muted);font-size:13px}.pill{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(70,120,90,.12);color:var(--sage);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.mono{font-family:var(--mono);font-size:12px}.empty{text-align:center;padding:24px;color:var(--muted)}
+@media (max-width:1150px){.grid4,.grid2{grid-template-columns:1fr}}@media (max-width:920px){.layout{display:block}.sidebar{width:auto}.main{padding:18px}}@media (max-width:640px){.topbar,.actions,.toolbar,.student-item{flex-direction:column;align-items:stretch}.title h1{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div class="brand-name">SmartAttend</div>
+      <div class="brand-sub">{{ program_name }} year graph</div>
+    </div>
+    <div>
+      <div class="nav-label">Main</div>
+      <a class="nav-item" href="/">Dashboard</a>
+      <a class="nav-item" href="/live">Live Camera</a>
+      <a class="nav-item" href="/attendance">Attendance</a>
+      <a class="nav-item active" href="/students">Students</a>
+    </div>
+    <div>
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/register">Register Student</a>
+      <a class="nav-item" href="/admin">System Admin</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="title">
+        <h1>Student Wise Year Graph</h1>
+        <p>Filter by year to compare all students on one graph. Click a bar or a student row to open the individual daily graph.</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ghost" href="/students">Back to Students</a>
+        <a class="btn btn-primary" href="/logout">Sign Out</a>
+      </div>
+    </div>
+
+    <div class="stack">
+      <section class="grid4">
+        <div class="card kpi"><div class="kpi-label">Selected Year</div><div class="kpi-value" id="yearValue">{{ selected_year }}</div><div class="kpi-sub">Current filter</div></div>
+        <div class="card kpi"><div class="kpi-label">Students In Year</div><div class="kpi-value" id="totalStudentsValue">{{ initial_overview.summary.total_students }}</div><div class="kpi-sub">Registered student profiles</div></div>
+        <div class="card kpi"><div class="kpi-label">Students Detected</div><div class="kpi-value" id="detectedStudentsValue">{{ initial_overview.summary.detected_students }}</div><div class="kpi-sub">At least one 5-minute bucket</div></div>
+        <div class="card kpi"><div class="kpi-label">Average Slots</div><div class="kpi-value" id="avgSlotsValue">{{ initial_overview.summary.avg_slots }}</div><div class="kpi-sub">Average 5-minute buckets per student</div></div>
+      </section>
+
+      <section class="grid2">
+        <div class="card">
+          <div class="card-body">
+            <div class="section-title">Year Overview Graph</div>
+            <div class="section-sub">Higher bars mean the student was detected in more 5-minute windows on the selected day.</div>
+            <div class="toolbar">
+              <div class="field">
+                <label>Year</label>
+                <select id="yearFilter">
+                  {% for year in year_options %}
+                  <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>Year {{ year }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label>Date</label>
+                <input type="date" id="dateFilter" value="{{ selected_date }}">
+              </div>
+              <button class="btn btn-sage" type="button" onclick="loadOverview()">Load Graph</button>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-box">
+                <canvas id="yearOverviewChart"></canvas>
+              </div>
+              <div class="chart-hint" id="overviewNote">Loading graph data...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="section-title">Student List</div>
+            <div class="section-sub">Click any student to open the individual graph for the selected date.</div>
+            <div class="list" id="studentList" style="margin-top:18px"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const initialOverview={{ initial_overview|tojson }};
+let overviewChart=null;
+
+function updateSummary(data){
+  document.getElementById('yearValue').textContent=data.year ?? '-';
+  document.getElementById('totalStudentsValue').textContent=data.summary?.total_students ?? 0;
+  document.getElementById('detectedStudentsValue').textContent=data.summary?.detected_students ?? 0;
+  document.getElementById('avgSlotsValue').textContent=data.summary?.avg_slots ?? 0;
+  const note=data.summary?.detected_students
+    ? `Showing ${data.summary.detected_students} detected students in Year ${data.year} for ${data.date}. Click any bar to open the student graph.`
+    : `No student detection data found for Year ${data.year} on ${data.date}.`;
+  document.getElementById('overviewNote').textContent=note;
+}
+
+function studentLink(student, date){
+  return `/students/${encodeURIComponent(student.student_id)}?date=${encodeURIComponent(date)}`;
+}
+
+function renderStudentList(data){
+  const container=document.getElementById('studentList');
+  if(!data.students || !data.students.length){
+    container.innerHTML='<div class="empty">No students found for this year.</div>';
+    return;
+  }
+  container.innerHTML=data.students.map(student=>`
+    <a class="student-item" href="${studentLink(student,data.date)}">
+      <div class="student-main">
+        <strong>${student.name}</strong>
+        <div class="mono">${student.student_id}</div>
+        <div class="student-meta">
+          <span>${student.department || 'UNASSIGNED'}</span>
+          <span>${student.slots_present} slots</span>
+          <span>${student.coverage_pct}% coverage</span>
+          <span>${student.first_seen ? `first ${student.first_seen}` : 'not seen yet'}</span>
+        </div>
+      </div>
+      <span class="pill">Open Graph</span>
+    </a>
+  `).join('');
+}
+
+function renderOverviewChart(data){
+  updateSummary(data);
+  renderStudentList(data);
+
+  if(!window.Chart){
+    document.getElementById('overviewNote').textContent='Chart library could not be loaded in the browser.';
+    return;
+  }
+
+  const ctx=document.getElementById('yearOverviewChart');
+  if(overviewChart){
+    overviewChart.destroy();
+  }
+
+  overviewChart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:data.labels,
+      datasets:[{
+        label:'5-minute slots',
+        data:data.values,
+        backgroundColor:'rgba(70,120,90,.72)',
+        borderColor:'#46785a',
+        borderWidth:1.5,
+        borderRadius:8
+      }]
+    },
+    options:{
+      maintainAspectRatio:false,
+      indexAxis:'y',
+      onClick:(event,elements)=>{
+        if(!elements.length) return;
+        const index=elements[0].index;
+        const student=data.students[index];
+        if(student){
+          window.location=studentLink(student,data.date);
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            title:(items)=>items.length?data.students[items[0].dataIndex].name:'',
+            label:(item)=>{
+              const student=data.students[item.dataIndex];
+              return [
+                `${student.slots_present} detected slots`,
+                `${student.coverage_pct}% day coverage`,
+                student.first_seen ? `First seen: ${student.first_seen}` : 'No detection yet',
+                student.last_seen ? `Last seen: ${student.last_seen}` : ''
+              ].filter(Boolean);
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          beginAtZero:true,
+          title:{display:true,text:'5-minute slots'},
+          grid:{color:'rgba(95,105,130,.12)'}
+        },
+        y:{
+          ticks:{autoSkip:false},
+          grid:{display:false}
+        }
+      }
+    }
+  });
+}
+
+function loadOverview(){
+  const year=document.getElementById('yearFilter').value;
+  const date=document.getElementById('dateFilter').value;
+  const params=new URLSearchParams({year,date});
+  fetch(`/api/student_presence_overview?${params.toString()}`)
+    .then(async response=>{
+      const data=await response.json();
+      if(!response.ok) throw new Error(data.message || 'Could not load student overview.');
+      history.replaceState({},'',`/students/graphs?year=${encodeURIComponent(data.year)}&date=${encodeURIComponent(data.date)}`);
+      renderOverviewChart(data);
+    })
+    .catch(error=>{
+      document.getElementById('overviewNote').textContent=error.message;
+    });
+}
+
+renderOverviewChart(initialOverview);
+</script>
+</body>
+</html>

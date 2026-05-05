@@ -1,110 +1,106 @@
 """
-=============================================================================
-  SmartAttend Camera Module
-=============================================================================
-  Provides a unified camera interface that works with:
-    • Raspberry Pi Camera Module (via picamera2)
-    • Standard USB webcam (via OpenCV VideoCapture)
-    • Fallback to image files (for offline testing)
+SmartAttend camera module.
 
-  HOW RASPBERRY PI CAMERA WORKS
-  ─────────────────────────────────────────────────────────────────────────
-  The Pi Camera Module connects to the CSI (Camera Serial Interface) port
-  on the Raspberry Pi board.  The camera sensor (IMX219 / IMX477) streams
-  raw Bayer data to the GPU over a dedicated high-bandwidth lane.
-
-  picamera2 is the modern Python library (replacing the old picamera) that:
-    1. Configures the sensor (resolution, framerate, exposure)
-    2. Uses the ISP (Image Signal Processor) built into the BCM2711/2712
-       chip to convert raw → JPEG/YUV/BGR
-    3. Returns frames as numpy arrays compatible with OpenCV
-
-  For USB webcams, OpenCV's VideoCapture opens /dev/video0 and reads
-  V4L2 (Video for Linux 2) frames directly.
-=============================================================================
+The camera runs in a dedicated capture thread and always keeps only the latest
+frame in memory. This avoids growing buffers and keeps the Raspberry Pi feed
+responsive even when recognition is slower than capture.
 """
 
-import cv2
-import time
+from __future__ import annotations
+
 import logging
+import os
 import threading
-import numpy as np
+import time
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
+
+import cv2
+import numpy as np
 
 logger = logging.getLogger("smartattend.camera")
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Configuration
-# ─────────────────────────────────────────────────────────────────────────────
+DEFAULT_RESOLUTION = (
+    int(os.environ.get("CAM_WIDTH", "640")),
+    int(os.environ.get("CAM_HEIGHT", "480")),
+)
+DEFAULT_FPS = int(os.environ.get("CAM_FPS", "20"))
+WARMUP_FRAMES = int(os.environ.get("CAM_WARMUP_FRAMES", "5"))
+DEFAULT_STREAM_QUALITY = int(os.environ.get("STREAM_JPEG_QUALITY", "70"))
 
-DEFAULT_RESOLUTION = (640, 480)    # width × height
-DEFAULT_FPS        = 20
-WARMUP_FRAMES      = 5             # discard first N frames (auto-exposure settle)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Camera backends
-# ─────────────────────────────────────────────────────────────────────────────
 
 class PiCamera2Backend:
-    """Uses picamera2 — for Raspberry Pi Camera Module (CSI)."""
+    """Camera backend for Raspberry Pi CSI cameras."""
 
     def __init__(self, resolution=DEFAULT_RESOLUTION, fps=DEFAULT_FPS):
         self.resolution = resolution
-        self.fps        = fps
-        self._cam       = None
+        self.fps = fps
+        self._cam = None
 
     def start(self):
         from picamera2 import Picamera2
+
         self._cam = Picamera2()
-        config = self._cam.create_preview_configuration(
-            main={"size": self.resolution, "format": "BGR888"},
-        )
+        try:
+            config = self._cam.create_preview_configuration(
+                main={"size": self.resolution, "format": "BGR888"},
+                buffer_count=2,
+                queue=False,
+            )
+        except TypeError:
+            config = self._cam.create_preview_configuration(
+                main={"size": self.resolution, "format": "BGR888"},
+            )
         self._cam.configure(config)
+
+        frame_us = int(1_000_000 / max(self.fps, 1))
+        try:
+            self._cam.set_controls({"FrameDurationLimits": (frame_us, frame_us)})
+        except Exception:
+            logger.debug("PiCamera2 did not accept FrameDurationLimits control", exc_info=True)
+
         self._cam.start()
-        # Warm up
         for _ in range(WARMUP_FRAMES):
             self._cam.capture_array()
-        logger.info("PiCamera2 started at %s", self.resolution)
+        logger.info("PiCamera2 started at %s @ %sfps", self.resolution, self.fps)
 
     def read(self) -> Tuple[bool, Optional[np.ndarray]]:
         if self._cam is None:
             return False, None
         try:
-            frame = self._cam.capture_array()
-            return True, frame
+            return True, self._cam.capture_array()
         except Exception as exc:
             logger.error("PiCamera2 read error: %s", exc)
             return False, None
 
     def stop(self):
-        if self._cam:
+        if self._cam is not None:
             self._cam.stop()
             self._cam = None
 
 
 class OpenCVBackend:
-    """Uses OpenCV VideoCapture — for USB webcams or V4L2 devices."""
+    """Camera backend for USB webcams or V4L2 devices."""
 
-    def __init__(self, device_id: int = 0,
-                 resolution=DEFAULT_RESOLUTION, fps=DEFAULT_FPS):
-        self.device_id  = device_id
+    def __init__(self, device_id: int = 0, resolution=DEFAULT_RESOLUTION, fps=DEFAULT_FPS):
+        self.device_id = device_id
         self.resolution = resolution
-        self.fps        = fps
-        self._cap       = None
+        self.fps = fps
+        self._cap = None
 
     def start(self):
         self._cap = cv2.VideoCapture(self.device_id)
         if not self._cap.isOpened():
             raise RuntimeError(f"Cannot open camera device {self.device_id}")
-        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH,  self.resolution[0])
+
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
         self._cap.set(cv2.CAP_PROP_FPS, self.fps)
-        # Flush warm-up frames
+        self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
         for _ in range(WARMUP_FRAMES):
             self._cap.read()
-        logger.info("OpenCV camera %d started at %s", self.device_id, self.resolution)
+        logger.info("OpenCV camera %s started at %s @ %sfps", self.device_id, self.resolution, self.fps)
 
     def read(self) -> Tuple[bool, Optional[np.ndarray]]:
         if self._cap is None:
@@ -112,62 +108,44 @@ class OpenCVBackend:
         return self._cap.read()
 
     def stop(self):
-        if self._cap:
+        if self._cap is not None:
             self._cap.release()
             self._cap = None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Unified Camera Manager
-# ─────────────────────────────────────────────────────────────────────────────
-
 class CameraManager:
-    """
-    Unified camera API with threaded frame buffering.
+    """Unified camera API with a latest-frame buffer."""
 
-    The capture loop runs in a background thread and continuously reads
-    the latest frame into `self._frame`.  Consumers call `get_frame()`
-    to get the most recent frame without blocking on I/O.
-
-    Usage
-    -----
-        cam = CameraManager(backend="auto")
-        cam.start()
-        frame = cam.get_frame()   # BGR numpy array
-        cam.stop()
-    """
-
-    def __init__(self, backend: str = "auto",
-                 device_id: int = 0,
-                 resolution: Tuple[int, int] = DEFAULT_RESOLUTION,
-                 fps: int = DEFAULT_FPS):
-        """
-        backend : "picamera2" | "opencv" | "auto"
-                  "auto" tries picamera2 first, falls back to opencv
-        """
-        self._backend     = self._build_backend(backend, device_id, resolution, fps)
-        self._frame       = None
-        self._frame_lock  = threading.Lock()
-        self._running     = False
-        self._thread      = None
+    def __init__(
+        self,
+        backend: str = "auto",
+        device_id: int = 0,
+        resolution: Tuple[int, int] = DEFAULT_RESOLUTION,
+        fps: int = DEFAULT_FPS,
+    ):
+        self._backend = self._build_backend(backend, device_id, resolution, fps)
+        self._frame: Optional[np.ndarray] = None
+        self._frame_ts = 0.0
+        self._frame_lock = threading.Lock()
+        self._running = False
+        self._thread = None
         self._frame_count = 0
-
-    # ── Lifecycle ─────────────────────────────────────────────────────────
+        self._capture_started_at = 0.0
 
     def start(self):
         self._backend.start()
         self._running = True
-        self._thread  = threading.Thread(
-            target=self._capture_loop, daemon=True, name="CameraCapture"
-        )
+        self._capture_started_at = time.time()
+        self._thread = threading.Thread(target=self._capture_loop, daemon=True, name="CameraCapture")
         self._thread.start()
-        # Wait until first frame is ready
+
         deadline = time.time() + 5.0
         while self._frame is None and time.time() < deadline:
             time.sleep(0.05)
         if self._frame is None:
-            raise RuntimeError("Camera did not produce a frame within 5 s")
-        logger.info("Camera ready ✓")
+            raise RuntimeError("Camera did not produce a frame within 5 seconds")
+
+        logger.info("Camera ready")
 
     def stop(self):
         self._running = False
@@ -176,46 +154,56 @@ class CameraManager:
         self._backend.stop()
         logger.info("Camera stopped")
 
-    # ── Frame access ──────────────────────────────────────────────────────
-
-    def get_frame(self) -> Optional[np.ndarray]:
-        """Return the most recent captured frame (BGR)."""
+    def get_frame(self, copy: bool = True) -> Optional[np.ndarray]:
         with self._frame_lock:
-            return self._frame.copy() if self._frame is not None else None
+            if self._frame is None:
+                return None
+            return self._frame.copy() if copy else self._frame
 
-    def get_jpeg(self, quality: int = 80) -> Optional[bytes]:
-        """Return the most recent frame encoded as JPEG bytes."""
-        frame = self.get_frame()
+    def get_frame_packet(self, copy: bool = True) -> Tuple[Optional[np.ndarray], float]:
+        with self._frame_lock:
+            if self._frame is None:
+                return None, 0.0
+            frame = self._frame.copy() if copy else self._frame
+            return frame, self._frame_ts
+
+    def get_jpeg(self, quality: int = DEFAULT_STREAM_QUALITY) -> Optional[bytes]:
+        frame = self.get_frame(copy=False)
         if frame is None:
             return None
-        _, buf = cv2.imencode(".jpg", frame,
-                               [cv2.IMWRITE_JPEG_QUALITY, quality])
-        return buf.tobytes()
+        ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+        return buf.tobytes() if ok else None
 
     def capture_still(self, path: str, n_frames: int = 5) -> bool:
-        """
-        Capture a high-quality still by averaging N consecutive frames
-        (reduces noise — useful for registration photos).
-        """
         frames = []
-        for _ in range(n_frames):
-            ok, frame = self._backend.read()
-            if ok and frame is not None:
-                frames.append(frame.astype(np.float32))
-            time.sleep(0.05)
+        last_ts = 0.0
+
+        for _ in range(max(n_frames, 1) * 3):
+            frame, ts = self.get_frame_packet(copy=True)
+            if frame is None or ts <= last_ts:
+                time.sleep(0.03)
+                continue
+            frames.append(frame.astype(np.float32))
+            last_ts = ts
+            if len(frames) >= n_frames:
+                break
+            time.sleep(0.03)
 
         if not frames:
             return False
 
         avg = np.mean(frames, axis=0).astype(np.uint8)
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        return cv2.imwrite(path, avg)
+        return bool(cv2.imwrite(path, avg))
 
     @property
     def frame_count(self) -> int:
         return self._frame_count
 
-    # ── Internal ──────────────────────────────────────────────────────────
+    @property
+    def capture_fps(self) -> float:
+        elapsed = max(time.time() - self._capture_started_at, 1e-6)
+        return self._frame_count / elapsed
 
     def _capture_loop(self):
         while self._running:
@@ -223,6 +211,7 @@ class CameraManager:
             if ok and frame is not None:
                 with self._frame_lock:
                     self._frame = frame
+                    self._frame_ts = time.time()
                 self._frame_count += 1
             else:
                 time.sleep(0.01)
@@ -233,63 +222,56 @@ class CameraManager:
             return PiCamera2Backend(resolution, fps)
         if backend == "opencv":
             return OpenCVBackend(device_id, resolution, fps)
-        # auto-detect
+
         try:
             import picamera2  # noqa: F401
+
             logger.info("Auto-detected PiCamera2 backend")
             return PiCamera2Backend(resolution, fps)
         except ImportError:
-            logger.info("PiCamera2 not found — using OpenCV backend")
+            logger.info("PiCamera2 not found, using OpenCV backend")
             return OpenCVBackend(device_id, resolution, fps)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  MJPEG stream generator (for Flask live feed)
-# ─────────────────────────────────────────────────────────────────────────────
+def mjpeg_stream_generator(
+    camera: CameraManager,
+    overlay_callback: Optional[Callable[[np.ndarray, float], np.ndarray]] = None,
+    fps_limit: int = 12,
+    quality: int = DEFAULT_STREAM_QUALITY,
+):
+    """Yield MJPEG frames without re-running recognition inside the stream."""
 
-def mjpeg_stream_generator(camera: CameraManager,
-                            face_engine=None,
-                            fps_limit: int = 15):
-    """
-    Generator that yields MJPEG boundary frames for Flask's Response.
-    Optionally overlays face recognition bounding boxes in real time.
+    interval = 1.0 / max(fps_limit, 1)
 
-    Flask route example:
-        @app.route("/video_feed")
-        def video_feed():
-            return Response(
-                mjpeg_stream_generator(cam, engine),
-                mimetype="multipart/x-mixed-replace; boundary=frame"
-            )
-    """
-    interval = 1.0 / fps_limit
     while True:
-        t0    = time.time()
-        frame = camera.get_frame()
+        started = time.time()
+        frame, frame_ts = camera.get_frame_packet(copy=False)
         if frame is None:
             time.sleep(interval)
             continue
 
-        # Optionally run recognition overlay
-        if face_engine and face_engine.is_model_loaded():
-            result = face_engine.process_frame(frame, draw_boxes=True)
-            display_frame = result.frame_with_boxes if result.frame_with_boxes is not None else frame
-        else:
-            display_frame = frame
+        display_frame = frame.copy()
+        if overlay_callback is not None:
+            display_frame = overlay_callback(display_frame, frame_ts)
 
-        # Add FPS counter overlay
-        fps_text = f"FPS: {1.0/max(interval,0.001):.0f}"
-        cv2.putText(display_frame, fps_text, (10, 22),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 100), 1)
+        cv2.putText(
+            display_frame,
+            f"Stream {fps_limit}fps",
+            (10, 22),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 200, 100),
+            1,
+            cv2.LINE_AA,
+        )
 
-        _, buf = cv2.imencode(".jpg", display_frame,
-                               [cv2.IMWRITE_JPEG_QUALITY, 70])
-        frame_bytes = buf.tobytes()
+        ok, buf = cv2.imencode(".jpg", display_frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+        if ok:
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n"
+            )
 
-        yield (b"--frame\r\n"
-               b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
-
-        # Throttle to fps_limit
-        elapsed = time.time() - t0
+        elapsed = time.time() - started
         if elapsed < interval:
             time.sleep(interval - elapsed)

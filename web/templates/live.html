@@ -3,75 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartAttend — Live Camera</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>SmartAttend - Live Classroom Camera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#1a2540;--sage:#4a7c59;--sage-lt:#6aab80;--font-serif:'Playfair Display',serif;--font-sans:'DM Sans',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#060d1a;color:#fff;font-family:var(--font-sans);height:100vh;display:flex;flex-direction:column;}
-.bar{background:rgba(10,18,36,0.95);padding:12px 22px;display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(10px);}
-.bar-title{font-family:var(--font-serif);font-size:18px;font-weight:600;}
-.dot{width:8px;height:8px;border-radius:50%;background:#4de784;box-shadow:0 0 0 3px rgba(77,231,132,0.25);animation:pulse 2s ease infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
-.bar-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:var(--font-sans);font-size:12px;font-weight:500;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.7);text-decoration:none;transition:all 0.18s;}
-.btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
-.btn-green{background:rgba(74,124,89,0.3);border-color:rgba(74,124,89,0.5);color:#7dcc96;}
-.btn-red{background:rgba(176,48,48,0.3);border-color:rgba(176,48,48,0.5);color:#ff8080;}
-.cam-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center;background:#06101e;}
-.cam-feed{max-width:100%;max-height:100%;object-fit:contain;}
-.overlay{position:absolute;bottom:0;left:0;right:0;padding:20px 24px;background:linear-gradient(0deg,rgba(6,13,26,0.95),transparent);display:flex;align-items:flex-end;justify-content:space-between;}
-.face-status{font-family:var(--font-mono);font-size:13px;color:rgba(255,255,255,0.7);}
-.face-status .name{color:#7dcc96;font-size:18px;font-weight:500;display:block;margin-bottom:2px;}
-.face-status .sub{color:rgba(255,255,255,0.35);font-size:11px;}
-.counter-panel{text-align:right;font-family:var(--font-mono);}
-.counter-panel .big{font-size:32px;font-weight:700;color:#7dcc96;line-height:1;}
-.counter-panel .lbl{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-top:2px;}
+:root{--bg:#07101d;--panel:#101b30;--panel2:#182743;--line:rgba(255,255,255,.08);--text:#fff;--muted:rgba(255,255,255,.6);--sage:#46785a;--sage2:#79ae83;--red:#b13c3c;--serif:'Playfair Display',serif;--sans:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}body{background:radial-gradient(circle at top left, rgba(70,120,90,.22), transparent 26%),var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}button,input,select{font-family:var(--sans)}a{text-decoration:none;color:inherit}
+.page{display:grid;grid-template-columns:380px 1fr;min-height:100vh}.left{padding:24px;border-right:1px solid var(--line);background:rgba(9,16,29,.92)}.right{display:flex;flex-direction:column}
+.title{font-family:var(--serif);font-size:30px;line-height:1.05}.sub{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.5}
+.card{margin-top:18px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:20px;padding:18px}.card h3{font-family:var(--serif);font-size:22px}.muted{color:var(--muted)}.form{display:grid;gap:12px;margin-top:16px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.52);font-weight:700}.field input,.field select{height:44px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:#fff;padding:0 14px;outline:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.btn{border:none;border-radius:12px;padding:11px 14px;font-weight:700;cursor:pointer}.btn-sage{background:var(--sage);color:#fff}.btn-danger{background:var(--red);color:#fff}.btn-ghost{background:rgba(255,255,255,.06);color:#fff;border:1px solid var(--line)}
+.pill{display:inline-block;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.75)}
+.session-box{margin-top:16px;padding:16px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}.session-box strong{display:block;font-family:var(--serif);font-size:24px;line-height:1.15;margin:12px 0 10px}.session-box p{margin-top:8px;color:var(--muted);font-size:14px}
+.topbar{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}.topbar .mini{font-size:13px;color:var(--muted)}
+.status-dot{width:10px;height:10px;border-radius:999px;background:#8c97ae;display:inline-block;margin-right:8px}.status-dot.live{background:#6ce08b;box-shadow:0 0 0 4px rgba(108,224,139,.18)}
+.feed-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:18px}.feed{width:100%;height:100%;max-height:calc(100vh - 140px);object-fit:contain;border-radius:22px;background:#0f1728;border:1px solid var(--line)}
+.overlay{padding:18px 22px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:12px;background:rgba(9,16,29,.92)}.metric{padding:14px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}.metric label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.48)}.metric div{margin-top:6px;font-weight:700}.mono{font-family:var(--mono);font-size:13px}
+#toast{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:10px}.toast{padding:12px 14px;border-radius:14px;background:#203152;color:#fff;max-width:320px}.toast.error{background:#872f2f}.toast.success{background:#315b43}
+@media (max-width:980px){.page{grid-template-columns:1fr}.overlay{grid-template-columns:1fr 1fr}}@media (max-width:640px){.overlay,.row{grid-template-columns:1fr;display:grid}.topbar{flex-direction:column;align-items:flex-start}}
 </style>
 </head>
 <body>
-<div class="bar">
-  <div class="dot"></div>
-  <div class="bar-title">Live Recognition Feed</div>
-  <div class="bar-right">
-    <button class="btn btn-green" id="startBtn" onclick="controlRecog('start')">▶ Start Recognition</button>
-    <button class="btn btn-red"   id="stopBtn"  onclick="controlRecog('stop')">■ Stop</button>
-    <a class="btn" href="/">← Dashboard</a>
-  </div>
-</div>
+<div class="page">
+  <aside class="left">
+    <div class="title">Live Classroom Camera</div>
+    <div class="sub">Move the single camera to the room where class is running, start that class session, and the system will mark attendance only for that branch and year.</div>
 
-<div class="cam-wrap">
-  <img class="cam-feed" src="/video_feed" alt="Camera feed"
-       onerror="this.style.opacity='0.3'">
-  <div class="overlay">
-    <div class="face-status">
-      <span class="name" id="faceName">—</span>
-      <span class="sub" id="faceStatus">Waiting for recognition…</span>
+    <div class="card">
+      <h3>Running Class Setup</h3>
+      <div class="form">
+        <div class="field"><label>Branch</label><select id="sessionBranch">{% for branch in branch_options %}<option value="{{ branch.code }}" {% if active_session and active_session.department == branch.code %}selected{% endif %}>{{ branch.code }} - {{ branch.name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Year</label><select id="sessionYear">{% for year in year_options %}<option value="{{ year }}" {% if active_session and active_session.year == year %}selected{% endif %}>Year {{ year }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Room</label><input id="sessionRoom" value="{{ active_session.room if active_session else '' }}" placeholder="A-203"></div>
+        <div class="field"><label>Subject</label><input id="sessionSubject" value="{{ active_session.subject if active_session else '' }}" placeholder="Digital Logic"></div>
+        <div class="field"><label>Section</label><input id="sessionSection" value="{{ active_session.section if active_session else '' }}" placeholder="Optional"></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-sage" onclick="startClassSession()">Start Class and Recognition</button>
+        <button class="btn btn-danger" onclick="stopClassSession()">Stop Class</button>
+      </div>
+      <div class="row">
+        <button class="btn btn-ghost" id="recogBtn" onclick="toggleRecognition()">{% if active_session %}Toggle Recognition{% else %}Start a class first{% endif %}</button>
+        <a class="btn btn-ghost" href="/">Back to Dashboard</a>
+      </div>
     </div>
-    <div class="counter-panel">
-      <div class="big" id="todayBig">0</div>
-      <div class="lbl">MARKED TODAY</div>
-    </div>
-  </div>
-</div>
 
+    <div class="card">
+      <span class="pill" id="sessionState">{% if active_session %}Active session{% else %}Waiting for session{% endif %}</span>
+      <div class="session-box">
+        <strong id="sessionLabel">{% if active_session %}{{ active_session.display_label }}{% else %}No active class session{% endif %}</strong>
+        <p><span class="muted">Batch:</span> <span id="sessionBatch">{% if active_session %}{{ active_session.batch_label }}{% else %}-{% endif %}</span></p>
+        <p><span class="muted">Room:</span> <span id="sessionRoomValue">{% if active_session %}{{ active_session.room }}{% else %}-{% endif %}</span></p>
+        <p><span class="muted">Marked in class:</span> <span id="sessionMarked">{% if active_summary %}{{ active_summary.present }}{% else %}0{% endif %}</span></p>
+      </div>
+    </div>
+  </aside>
+
+  <section class="right">
+    <div class="topbar">
+      <div>
+        <span class="status-dot{% if active_session %} live{% endif %}" id="statusDot"></span>
+        <strong id="statusText">{% if active_session %}Ready for live attendance{% else %}Waiting for class setup{% endif %}</strong>
+      </div>
+      <div class="mini" id="clockText">Loading time</div>
+    </div>
+    <div class="feed-wrap">
+      <img class="feed" src="/video_feed" alt="Live camera feed" onerror="this.alt='Camera unavailable';this.style.opacity='0.35';">
+    </div>
+    <div class="overlay">
+      <div class="metric"><label>Last Face Seen</label><div id="lastSeen">-</div></div>
+      <div class="metric"><label>Last Attendance Marked</label><div id="lastMarked">-</div></div>
+      <div class="metric"><label>Status</label><div id="lastStatus">Waiting for recognition</div></div>
+      <div class="metric"><label>Class Count</label><div class="mono" id="classCount">{{ active_summary.present if active_summary else 0 }}</div></div>
+      <div class="metric"><label>Today's Records</label><div class="mono" id="todayCount">0</div></div>
+    </div>
+  </section>
+</div>
+<div id="toast"></div>
 <script>
-function controlRecog(action) {
-  fetch('/api/recognition/' + action, {method:'POST'})
-    .then(r => r.json());
-}
-
-setInterval(() => {
-  fetch('/api/live_status').then(r => r.json()).then(d => {
-    document.getElementById('todayBig').textContent = d.today_count || 0;
-    if (d.last_name) {
-      document.getElementById('faceName').textContent = d.last_name;
-      const st = {marked:'✓ Attendance Marked', duplicate:'Already marked today',
-                  low_confidence:'Low confidence — not marked', unknown:'Unknown face'};
-      document.getElementById('faceStatus').textContent = st[d.last_status] || d.last_status;
-    }
-  });
-}, 2000);
+let recognitionOn=false;
+let latestMarkedToken=null;
+let statusHydrated=false;
+const statusText={marked:'Attendance marked',duplicate:'Already marked in this class',low_confidence:'Low confidence - not marked',unknown:'Unknown face',no_active_session:'Start class session first',not_in_session:'Student does not belong to this class'};
+function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3600)}
+function setClock(){document.getElementById('clockText').textContent=new Date().toLocaleString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function applySession(session,summary){document.getElementById('sessionState').textContent=session?'Active session':'Waiting for session';document.getElementById('sessionLabel').textContent=session?session.display_label:'No active class session';document.getElementById('sessionBatch').textContent=session?session.batch_label:'-';document.getElementById('sessionRoomValue').textContent=session?session.room:'-';document.getElementById('sessionMarked').textContent=summary?summary.present:0;document.getElementById('classCount').textContent=summary?summary.present:0;document.getElementById('statusDot').className=session?'status-dot live':'status-dot';document.getElementById('statusText').textContent=session?'Ready for live attendance':'Waiting for class setup';if(session){document.getElementById('sessionBranch').value=session.department;document.getElementById('sessionYear').value=session.year;document.getElementById('sessionRoom').value=session.room||'';document.getElementById('sessionSubject').value=session.subject||'';document.getElementById('sessionSection').value=session.section||'';}}
+function setRecognitionButton(){const btn=document.getElementById('recogBtn');btn.textContent=recognitionOn?'Stop Recognition':'Start Recognition';btn.className=recognitionOn?'btn btn-danger':'btn btn-ghost'}
+function toggleRecognition(){const action=recognitionOn?'stop':'start';fetch(`/api/recognition/${action}`,{method:'POST'}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'Could not change recognition state.','error');return;}recognitionOn=action==='start';setRecognitionButton();pollStatus()}).catch(()=>toast('Network error while changing recognition state.','error'))}
+function startClassSession(){fetch('/api/session/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({department:document.getElementById('sessionBranch').value,year:parseInt(document.getElementById('sessionYear').value,10),room:document.getElementById('sessionRoom').value.trim(),subject:document.getElementById('sessionSubject').value.trim(),section:document.getElementById('sessionSection').value.trim()})}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'Could not start class session.','error');return;}toast(data.message,'success');fetch('/api/recognition/start',{method:'POST'}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'Class started but recognition did not start.','error')}pollStatus()})}).catch(()=>toast('Network error while starting class session.','error'))}
+function stopClassSession(){fetch('/api/session/stop',{method:'POST'}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'No active class session.');return;}recognitionOn=false;setRecognitionButton();applySession(null,null);toast(data.message,'success');pollStatus()}).catch(()=>toast('Network error while stopping class session.','error'))}
+function pollStatus(){fetch('/api/live_status').then(r=>r.json()).then(data=>{recognitionOn=!!data.running;setRecognitionButton();document.getElementById('todayCount').textContent=data.today_count||0;document.getElementById('lastSeen').textContent=data.last_name?`${data.last_name}${data.last_time?` at ${data.last_time}`:''}`:'-';document.getElementById('lastMarked').textContent=data.last_marked_name?`${data.last_marked_name}${data.last_marked_time?` at ${data.last_marked_time}`:''}`:'-';document.getElementById('lastStatus').textContent=data.last_message||statusText[data.last_status]||'Waiting for recognition';const markedToken=data.last_marked_name&&data.last_marked_time?`${data.last_marked_name}|${data.last_marked_time}`:null;if(statusHydrated&&markedToken&&markedToken!==latestMarkedToken){toast(`Attendance marked for ${data.last_marked_name}`,'success')}latestMarkedToken=markedToken||latestMarkedToken;statusHydrated=true;applySession(data.active_session,data.active_summary)}).catch(()=>{})}
+setClock();setInterval(setClock,60000);setRecognitionButton();applySession({{ active_session|tojson }},{{ active_summary|tojson }});pollStatus();setInterval(pollStatus,2500);
 </script>
 </body>
 </html>

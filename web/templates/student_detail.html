@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartAttend - {{ student.name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f1e8;--card:#fff;--soft:#ece4d8;--ink:#1b2440;--muted:#5f6982;--nav:#17233f;--line:#d7cfbf;--sage:#46785a;--sage2:#78ab82;--amber:#c47a2b;--red:#b13d3d;--shadow:0 12px 32px rgba(27,36,64,.08);--r:18px;--serif:'Playfair Display',serif;--sans:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--ink);font-family:var(--sans)}a{text-decoration:none;color:inherit}
+.layout{display:flex;min-height:100vh}.sidebar{width:244px;background:linear-gradient(180deg,var(--nav),#11192f);color:#fff;padding:24px 18px;display:flex;flex-direction:column;gap:24px}
+.brand{border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:20px}.brand-mark{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--sage),var(--sage2));display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-weight:700}.brand-name{font-family:var(--serif);font-size:24px}.brand-sub{margin-top:4px;font-size:12px;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase}
+.nav-label{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.14em;text-transform:uppercase;padding:0 10px 8px}.nav-item{display:block;padding:11px 12px;border-radius:12px;color:rgba(255,255,255,.7);font-weight:500}.nav-item:hover,.nav-item.active{background:rgba(255,255,255,.08);color:#fff}
+.main{flex:1;padding:24px 28px}.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}.title h1{font-family:var(--serif);font-size:34px;line-height:1.05}.title p{margin-top:8px;color:var(--muted);max-width:760px}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:none;border-radius:12px;padding:11px 16px;font-family:var(--sans);font-weight:700;cursor:pointer}.btn-primary{background:var(--nav);color:#fff}.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}.btn-sage{background:var(--sage);color:#fff}
+.stack{display:flex;flex-direction:column;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}.card-body{padding:20px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.grid2{display:grid;grid-template-columns:1.3fr .7fr;gap:16px}
+.kpi{padding:20px}.kpi-label{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.kpi-value{font-family:var(--serif);font-size:38px;line-height:1;margin-top:10px}.kpi-sub{margin-top:10px;font-size:13px;color:var(--muted)}
+.section-title{font-family:var(--serif);font-size:24px}.section-sub{margin-top:6px;color:var(--muted);font-size:14px}.toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-top:18px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}.field input{height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 14px;outline:none}
+.chart-wrap{margin-top:18px;padding:16px;border-radius:18px;background:linear-gradient(180deg,#fbf8f2,#f2ebde);border:1px solid var(--line)}.chart-box{position:relative;min-height:380px}.chart-hint{margin-top:12px;color:var(--muted);font-size:13px}
+.meta-list{display:grid;gap:12px}.meta-item{padding:14px;border-radius:14px;background:var(--soft)}.meta-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}.meta-value{margin-top:6px;font-weight:700}.mono{font-family:var(--mono);font-size:12px}
+.table-wrap{overflow:auto;margin-top:14px}table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left}th{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}tr:last-child td{border-bottom:none}.empty{padding:26px;text-align:center;color:var(--muted)}
+@media (max-width:1150px){.grid4,.grid2{grid-template-columns:1fr}}@media (max-width:920px){.layout{display:block}.sidebar{width:auto}.main{padding:18px}}@media (max-width:640px){.topbar,.actions,.toolbar{flex-direction:column;align-items:stretch}.title h1{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div class="brand-name">SmartAttend</div>
+      <div class="brand-sub">{{ program_name }} student graph</div>
+    </div>
+    <div>
+      <div class="nav-label">Main</div>
+      <a class="nav-item" href="/">Dashboard</a>
+      <a class="nav-item" href="/live">Live Camera</a>
+      <a class="nav-item" href="/attendance">Attendance</a>
+      <a class="nav-item active" href="/students">Students</a>
+    </div>
+    <div>
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/register">Register Student</a>
+      <a class="nav-item" href="/admin">System Admin</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="title">
+        <h1>{{ student.name }}</h1>
+        <p>Daily presence graph in 5-minute windows. A value of 1 means the camera detected this student at least once in that time slot.</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ghost" href="/students">Back to Students</a>
+        <a class="btn btn-primary" href="/logout">Sign Out</a>
+      </div>
+    </div>
+
+    <div class="stack">
+      <section class="grid4">
+        <div class="card kpi"><div class="kpi-label">Student ID</div><div class="kpi-value mono" id="studentIdValue">{{ student.student_id }}</div><div class="kpi-sub">{{ student.branch_name or 'Branch not assigned yet' }}</div></div>
+        <div class="card kpi"><div class="kpi-label">Batch</div><div class="kpi-value" id="batchValue">{{ student.department or 'NA' }}</div><div class="kpi-sub">Year {{ student.year }}</div></div>
+        <div class="card kpi"><div class="kpi-label">5 Min Slots Seen</div><div class="kpi-value" id="slotsPresentValue">{{ initial_timeline.slots_present }}</div><div class="kpi-sub">Detected windows for selected date</div></div>
+        <div class="card kpi"><div class="kpi-label">Coverage</div><div class="kpi-value" id="coverageValue">{{ initial_timeline.coverage_pct }}%</div><div class="kpi-sub">Portion of the day with detection</div></div>
+      </section>
+
+      <section class="grid2">
+        <div class="card">
+          <div class="card-body">
+            <div class="section-title">Presence Timeline</div>
+            <div class="section-sub">Zoom in to inspect a short period and reset to return to the full 24-hour view.</div>
+            <div class="toolbar">
+              <div class="field">
+                <label>Date</label>
+                <input type="date" id="dateFilter" value="{{ selected_date }}">
+              </div>
+              <button class="btn btn-sage" type="button" onclick="loadTimeline()">Load Graph</button>
+              <button class="btn btn-ghost" type="button" onclick="resetZoom()">Reset Zoom</button>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-box">
+                <canvas id="presenceChart"></canvas>
+              </div>
+              <div class="chart-hint" id="timelineNote">Loading graph data...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="section-title">Selected Day Summary</div>
+            <div class="section-sub">These numbers are based on the 5-minute presence buckets, not official attendance.</div>
+            <div class="meta-list" style="margin-top:18px">
+              <div class="meta-item"><div class="meta-label">First Seen</div><div class="meta-value" id="firstSeenValue">{{ initial_timeline.first_seen or '-' }}</div></div>
+              <div class="meta-item"><div class="meta-label">Last Seen</div><div class="meta-value" id="lastSeenValue">{{ initial_timeline.last_seen or '-' }}</div></div>
+              <div class="meta-item"><div class="meta-label">Buckets Logged</div><div class="meta-value" id="detectionCountValue">{{ initial_timeline.total_detections }}</div></div>
+              <div class="meta-item"><div class="meta-label">Registered On</div><div class="meta-value">{{ student.registered_at[:10] }}</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-body">
+          <div class="section-title">Attendance History</div>
+          <div class="section-sub">Recent official class attendance records for this student.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Room</th>
+                  <th>Subject</th>
+                  <th>Session</th>
+                  <th>Confidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in attendance_history %}
+                <tr>
+                  <td class="mono">{{ item.date }}</td>
+                  <td class="mono">{{ item.time }}</td>
+                  <td>{{ item.room or '-' }}</td>
+                  <td>{{ item.subject or '-' }}</td>
+                  <td>{{ item.session_label }}</td>
+                  <td class="mono">{{ '%.0f'|format(item.confidence * 100) }}%</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="empty">No attendance history found for this student yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script>
+const studentId={{ student.student_id|tojson }};
+const initialTimeline={{ initial_timeline|tojson }};
+let presenceChart=null;
+const zoomPlugin=window.ChartZoom || window.zoomPlugin || window['chartjs-plugin-zoom'];
+
+if(window.Chart && zoomPlugin){
+  Chart.register(zoomPlugin);
+}
+
+function updateSummary(data){
+  document.getElementById('slotsPresentValue').textContent=data.slots_present ?? 0;
+  document.getElementById('coverageValue').textContent=`${data.coverage_pct ?? 0}%`;
+  document.getElementById('firstSeenValue').textContent=data.first_seen || '-';
+  document.getElementById('lastSeenValue').textContent=data.last_seen || '-';
+  document.getElementById('detectionCountValue').textContent=data.total_detections ?? 0;
+  const note=data.slots_present
+    ? `Showing ${data.slots_present} detected 5-minute slots on ${data.date}. Use mouse wheel or pinch to zoom.`
+    : `No camera detections were logged for ${data.date}.`;
+  document.getElementById('timelineNote').textContent=note;
+}
+
+function buildTooltip(slot){
+  if(!slot){
+    return ['No detection in this 5-minute window'];
+  }
+  const lines=['Detection logged in this 5-minute window'];
+  if(slot.last_seen_at) lines.push(`Last seen: ${slot.last_seen_at.slice(11)}`);
+  if(slot.session_label) lines.push(slot.session_label);
+  return lines;
+}
+
+function renderChart(data){
+  updateSummary(data);
+
+  if(!window.Chart){
+    document.getElementById('timelineNote').textContent='Chart library could not be loaded in the browser.';
+    return;
+  }
+
+  const ctx=document.getElementById('presenceChart');
+  if(presenceChart){
+    presenceChart.destroy();
+  }
+
+  presenceChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:data.labels,
+      datasets:[{
+        label:'Present',
+        data:data.values,
+        stepped:true,
+        borderColor:'#46785a',
+        backgroundColor:'rgba(70,120,90,.18)',
+        borderWidth:2,
+        fill:true,
+        pointRadius:0,
+        pointHoverRadius:4,
+        tension:0
+      }]
+    },
+    options:{
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      scales:{
+        x:{
+          ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:18},
+          grid:{color:'rgba(95,105,130,.08)'}
+        },
+        y:{
+          min:0,
+          max:1,
+          ticks:{
+            stepSize:1,
+            callback:(value)=>value===1?'Seen':'Not seen'
+          },
+          grid:{color:'rgba(95,105,130,.12)'}
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            title:(items)=>items.length?`Time ${items[0].label}`:'',
+            label:(item)=>buildTooltip(data.slots[item.dataIndex]||null)
+          }
+        },
+        zoom:{
+          pan:{enabled:true,mode:'x'},
+          zoom:{
+            wheel:{enabled:true},
+            pinch:{enabled:true},
+            drag:{enabled:true,backgroundColor:'rgba(27,36,64,.10)'},
+            mode:'x'
+          }
+        }
+      }
+    }
+  });
+}
+
+function resetZoom(){
+  if(presenceChart){
+    presenceChart.resetZoom();
+  }
+}
+
+function loadTimeline(){
+  const date=document.getElementById('dateFilter').value;
+  const params=new URLSearchParams();
+  if(date) params.set('date',date);
+  fetch(`/api/student_presence_timeline/${encodeURIComponent(studentId)}?${params.toString()}`)
+    .then(async response=>{
+      const data=await response.json();
+      if(!response.ok) throw new Error(data.message || 'Could not load graph data.');
+      history.replaceState({},'',`/students/${encodeURIComponent(studentId)}?date=${data.date}`);
+      renderChart(data);
+    })
+    .catch(error=>{
+      document.getElementById('timelineNote').textContent=error.message;
+    });
+}
+
+renderChart(initialTimeline);
+</script>
+</body>
+</html>
