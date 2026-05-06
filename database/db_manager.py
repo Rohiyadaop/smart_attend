@@ -709,6 +709,112 @@ class DBManager:
             },
         }
 
+    def get_presence_interval_report(self, date_str: str,
+                                     session_id: Optional[int] = None,
+                                     interval_minutes: int = 60) -> List[Dict]:
+        day_start = datetime.strptime(date_str, "%Y-%m-%d")
+        interval_minutes = max(int(interval_minutes or 60), 5)
+
+        cur = self._cursor()
+        params: List[object] = [date_str]
+        session_filter = ""
+        if session_id:
+            session_filter = " AND sp.session_id = ?"
+            params.append(int(session_id))
+
+        cur.execute(f"""
+            SELECT sp.student_id, sp.session_id, sp.bucket_start, sp.last_seen_at,
+                   s.name, s.department, s.year,
+                   cs.program, cs.department AS session_department,
+                   cs.year AS session_year, cs.room, cs.subject, cs.section,
+                   cs.started_at, cs.ended_at, cs.status AS session_status
+            FROM student_presence sp
+            JOIN students s ON sp.student_id = s.student_id
+            LEFT JOIN class_sessions cs ON sp.session_id = cs.id
+            WHERE sp.bucket_date = ?{session_filter}
+            ORDER BY sp.session_id ASC, sp.bucket_start ASC, s.name ASC
+        """, params)
+
+        grouped: Dict[tuple, Dict] = {}
+        for row in cur.fetchall():
+            record = dict(row)
+            bucket_dt = datetime.strptime(record["bucket_start"], "%Y-%m-%d %H:%M:%S")
+            minutes_from_start = int((bucket_dt - day_start).total_seconds() // 60)
+            interval_index = max(minutes_from_start // interval_minutes, 0)
+            interval_start_dt = day_start + timedelta(minutes=interval_index * interval_minutes)
+            interval_end_dt = interval_start_dt + timedelta(minutes=interval_minutes)
+            key = (
+                int(record["session_id"] or 0),
+                interval_start_dt.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+
+            if key not in grouped:
+                session_department = normalize_branch(record.get("session_department", ""))
+                session_year = int(record.get("session_year") or record.get("year") or 1)
+                section = (record.get("section") or "").strip().upper()
+                program = record.get("program") or PROGRAM_NAME
+                grouped[key] = {
+                    "date": date_str,
+                    "session_id": int(record["session_id"] or 0),
+                    "session_label": format_session_label(
+                        program,
+                        session_department,
+                        session_year,
+                        record.get("room", ""),
+                        record.get("subject", ""),
+                        section,
+                    ) if record.get("session_id") else "Unassigned session",
+                    "batch_label": format_batch_label(
+                        session_department,
+                        session_year,
+                        section,
+                    ) if session_department else "",
+                    "room": (record.get("room") or "").strip().upper(),
+                    "subject": (record.get("subject") or "").strip(),
+                    "section": section,
+                    "department": session_department,
+                    "year": session_year,
+                    "interval_start": interval_start_dt.strftime("%H:%M"),
+                    "interval_end": interval_end_dt.strftime("%H:%M"),
+                    "interval_minutes": interval_minutes,
+                    "student_count": 0,
+                    "student_ids": [],
+                    "student_names": [],
+                    "first_seen_at": record.get("last_seen_at", "")[11:19],
+                    "last_seen_at": record.get("last_seen_at", "")[11:19],
+                    "_seen_ids": set(),
+                }
+
+            bucket = grouped[key]
+            student_id = str(record.get("student_id") or "").strip()
+            student_name = str(record.get("name") or "").strip()
+            if student_id and student_id not in bucket["_seen_ids"]:
+                bucket["_seen_ids"].add(student_id)
+                bucket["student_ids"].append(student_id)
+                bucket["student_names"].append(student_name)
+                bucket["student_count"] += 1
+
+            seen_time = record.get("last_seen_at", "")[11:19]
+            if seen_time:
+                if not bucket["first_seen_at"] or seen_time < bucket["first_seen_at"]:
+                    bucket["first_seen_at"] = seen_time
+                if not bucket["last_seen_at"] or seen_time > bucket["last_seen_at"]:
+                    bucket["last_seen_at"] = seen_time
+
+        rows: List[Dict] = []
+        for item in grouped.values():
+            item["student_ids"] = ", ".join(item["student_ids"])
+            item["student_names"] = ", ".join(item["student_names"])
+            item.pop("_seen_ids", None)
+            rows.append(item)
+
+        rows.sort(key=lambda row: (
+            row["session_label"],
+            row["interval_start"],
+            row["room"],
+        ))
+        return rows
+
     def get_session_attendance(self, session_id: int) -> List[Dict]:
         cur = self._cursor()
         cur.execute("""

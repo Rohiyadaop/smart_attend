@@ -27,6 +27,11 @@ DEFAULT_RESOLUTION = (
 DEFAULT_FPS = int(os.environ.get("CAM_FPS", "20"))
 WARMUP_FRAMES = int(os.environ.get("CAM_WARMUP_FRAMES", "5"))
 DEFAULT_STREAM_QUALITY = int(os.environ.get("STREAM_JPEG_QUALITY", "70"))
+CAM_BRIGHTNESS = float(os.environ.get("CAM_BRIGHTNESS", "0.0"))
+CAM_CONTRAST = float(os.environ.get("CAM_CONTRAST", "1.0"))
+CAM_SATURATION = float(os.environ.get("CAM_SATURATION", "1.0"))
+CAM_SHARPNESS = float(os.environ.get("CAM_SHARPNESS", "1.0"))
+CAM_AWB_ENABLE = os.environ.get("CAM_AWB_ENABLE", "true").strip().lower() == "true"
 
 
 class PiCamera2Backend:
@@ -59,10 +64,31 @@ class PiCamera2Backend:
         except Exception:
             logger.debug("PiCamera2 did not accept FrameDurationLimits control", exc_info=True)
 
+        color_controls = {
+            "AwbEnable": CAM_AWB_ENABLE,
+            "Brightness": CAM_BRIGHTNESS,
+            "Contrast": CAM_CONTRAST,
+            "Saturation": CAM_SATURATION,
+            "Sharpness": CAM_SHARPNESS,
+        }
+        try:
+            self._cam.set_controls(color_controls)
+        except Exception:
+            logger.debug("PiCamera2 did not accept color controls", exc_info=True)
+
         self._cam.start()
         for _ in range(WARMUP_FRAMES):
             self._cam.capture_array()
-        logger.info("PiCamera2 started at %s @ %sfps", self.resolution, self.fps)
+        logger.info(
+            "PiCamera2 started at %s @ %sfps (brightness=%s contrast=%s saturation=%s sharpness=%s awb=%s)",
+            self.resolution,
+            self.fps,
+            CAM_BRIGHTNESS,
+            CAM_CONTRAST,
+            CAM_SATURATION,
+            CAM_SHARPNESS,
+            CAM_AWB_ENABLE,
+        )
 
     def read(self) -> Tuple[bool, Optional[np.ndarray]]:
         if self._cam is None:

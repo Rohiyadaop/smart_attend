@@ -47,7 +47,8 @@
         <p>Review all daily records or filter a specific class session by branch, year, and room.</p>
       </div>
       <div class="actions">
-        <a class="btn btn-ghost" href="/download/attendance?date={{ selected_date }}{% if selected_session_id %}&session={{ selected_session_id }}{% endif %}">Download CSV</a>
+        <a class="btn btn-ghost" href="/download/attendance?date={{ selected_date }}{% if selected_session_id %}&session={{ selected_session_id }}{% endif %}">Download Attendance CSV</a>
+        <a class="btn btn-ghost" href="/download/presence_report?date={{ selected_date }}{% if selected_session_id %}&session={{ selected_session_id }}{% endif %}&interval=60">Download Hourly Presence CSV</a>
         <a class="btn btn-primary" href="/logout">Sign Out</a>
       </div>
     </div>

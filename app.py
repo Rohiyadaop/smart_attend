@@ -874,10 +874,11 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASS",  "smartattend2024")
 CAMERA_BACKEND = os.environ.get("CAMERA",      "auto")   # auto|picamera2|opencv
 CAMERA_DEVICE  = int(os.environ.get("CAM_DEV", "0"))
 GPIO_ENABLED   = os.environ.get("GPIO", "false").lower() == "true"
-RECOGNITION_FPS = max(float(os.environ.get("RECOG_FPS", "5")), 1.0)
-STREAM_FPS      = max(int(os.environ.get("STREAM_FPS", "12")), 1)
+RECOGNITION_FPS = max(float(os.environ.get("RECOG_FPS", "30")), 1.0)
+STREAM_FPS      = max(int(os.environ.get("STREAM_FPS", "30")), 1)
 STREAM_QUALITY  = max(int(os.environ.get("STREAM_JPEG_QUALITY", "70")), 40)
 OVERLAY_TTL_SEC = max(float(os.environ.get("OVERLAY_TTL_SEC", "0.45")), 0.1)
+ATTEND_CONFIRM_FRAMES = max(int(os.environ.get("ATTEND_CONFIRM_FRAMES", "5")), 1)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Singletons
@@ -1194,6 +1195,8 @@ def recognition_loop():
     _ensure_camera()
     target_interval = 1.0 / RECOGNITION_FPS
     last_loop_started = time.time()
+    confirmation_counts: dict[str, int] = {}
+    confirmation_session_id = None
 
     while recog_state["running"]:
         loop_started = time.time()
@@ -1218,13 +1221,45 @@ def recognition_loop():
             last_loop_started = loop_started
 
             active_session = db.get_active_session()
+            active_session_id = (
+                int(active_session["id"])
+                if active_session and active_session.get("id")
+                else None
+            )
+            if active_session_id != confirmation_session_id:
+                confirmation_counts.clear()
+                confirmation_session_id = active_session_id
+
+            current_frame_ids = set()
             for face in result.faces:
-                outcome = attendmgr.mark_attendance(
-                    student_id = face.student_id,
-                    name       = face.name,
-                    confidence = face.confidence,
-                    active_session = active_session,
-                )
+                if not face.student_id or face.student_id in current_frame_ids:
+                    continue
+                current_frame_ids.add(face.student_id)
+                confirmation_counts[face.student_id] = confirmation_counts.get(face.student_id, 0) + 1
+            confirmation_counts = {
+                student_id: confirmation_counts[student_id]
+                for student_id in current_frame_ids
+                if student_id in confirmation_counts
+            }
+
+            for face in result.faces:
+                confirmed_frames = confirmation_counts.get(face.student_id, 0)
+                if face.student_id and confirmed_frames < ATTEND_CONFIRM_FRAMES:
+                    outcome = {
+                        "status": "confirming",
+                        "message": (
+                            f"{face.name} detected {confirmed_frames}/"
+                            f"{ATTEND_CONFIRM_FRAMES} frames"
+                        ),
+                        "record": None,
+                    }
+                else:
+                    outcome = attendmgr.mark_attendance(
+                        student_id = face.student_id,
+                        name       = face.name,
+                        confidence = face.confidence,
+                        active_session = active_session,
+                    )
                 if (
                     outcome["status"] in {"marked", "duplicate"}
                     and active_session
@@ -1254,10 +1289,13 @@ def recognition_loop():
                     gpio.on_attendance_marked(face.name)
                 elif outcome["status"] == "duplicate":
                     gpio.on_duplicate(face.name)
+                elif outcome["status"] == "confirming":
+                    pass
                 else:
                     gpio.on_unknown_face()
 
             if not result.faces:
+                confirmation_counts.clear()
                 with recog_lock:
                     recog_state["last_faces"] = []
 
@@ -1653,6 +1691,27 @@ def download_attendance():
         mimetype    = "text/csv",
         as_attachment = True,
         download_name = f"attendance_{date_str}{name_suffix}.csv",
+    )
+
+
+@app.route("/download/presence_report")
+@login_required
+def download_presence_report():
+    date_str = request.args.get("date", _today_str())
+    session_id = request.args.get("session", type=int)
+    interval_minutes = max(request.args.get("interval", default=60, type=int) or 60, 5)
+    csv_data = attendmgr.export_presence_interval_csv(
+        date_str,
+        session_id=session_id,
+        interval_minutes=interval_minutes,
+    )
+    buf = io.BytesIO(csv_data.encode("utf-8"))
+    name_suffix = f"_{session_id}" if session_id else ""
+    return send_file(
+        buf,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=f"presence_{date_str}{name_suffix}_{interval_minutes}min.csv",
     )
 
 

@@ -1,0 +1,36 @@
+[Unit]
+Description=SmartAttend Face Recognition Attendance System
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/smartattend
+
+# Core app settings
+Environment=ADMIN_USER=admin
+Environment=ADMIN_PASS=smartattend2024
+Environment=SECRET_KEY=change-this-secret-key
+Environment=CAMERA=picamera2
+Environment=GPIO=false
+
+# Recognition tuning
+Environment=ATTEND_MIN_CONF=0.45
+Environment=ATTEND_CONFIRM_FRAMES=5
+Environment=RECOG_FPS=30
+Environment=STREAM_FPS=30
+
+# Camera color tuning
+Environment=CAM_SATURATION=1.35
+Environment=CAM_CONTRAST=1.12
+Environment=CAM_SHARPNESS=1.10
+Environment=CAM_BRIGHTNESS=0.03
+Environment=CAM_AWB_ENABLE=true
+
+ExecStart=/home/pi/smartattend/venv/bin/python /home/pi/smartattend/app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -20,7 +20,7 @@ from database.db_manager import DBManager
 logger = logging.getLogger("smartattend.attendance")
 
 CONFIDENCE_THRESHOLD = float(
-    os.environ.get("ATTEND_MIN_CONF", os.environ.get("FACE_MIN_CONF", "0.35"))
+    os.environ.get("ATTEND_MIN_CONF", os.environ.get("FACE_MIN_CONF", "0.45"))
 )
 
 
@@ -235,6 +235,40 @@ class AttendanceManager:
                 "subject",
                 "session_label",
                 "confidence",
+            ],
+            extrasaction="ignore",
+        )
+        writer.writeheader()
+        writer.writerows(records)
+        return buf.getvalue()
+
+    def export_presence_interval_csv(self, date_str: str,
+                                     session_id: Optional[int] = None,
+                                     interval_minutes: int = 60) -> str:
+        interval_records = self.db.get_presence_interval_report(
+            date_str,
+            session_id=session_id,
+            interval_minutes=interval_minutes,
+        )
+        records = [
+            {
+                "date": item.get("date"),
+                "session_label": item.get("session_label"),
+                "interval_start": item.get("interval_start"),
+                "interval_end": item.get("interval_end"),
+                "present_students": item.get("student_names", ""),
+            }
+            for item in interval_records
+        ]
+        buf = io.StringIO()
+        writer = csv.DictWriter(
+            buf,
+            fieldnames=[
+                "date",
+                "session_label",
+                "interval_start",
+                "interval_end",
+                "present_students",
             ],
             extrasaction="ignore",
         )
