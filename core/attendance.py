@@ -36,6 +36,7 @@ class AttendanceManager:
 
     def mark_attendance(self, student_id: str, name: str,
                         confidence: float,
+                        liveness_score: float = 0.0,
                         active_session: Optional[Dict] = None) -> Dict:
         """
         Attempt to mark attendance for a recognised student.
@@ -120,6 +121,7 @@ class AttendanceManager:
             date_str=now.strftime("%Y-%m-%d"),
             time_str=now.strftime("%H:%M:%S"),
             confidence=round(confidence, 4),
+            liveness_score=round(liveness_score, 4),
         )
 
         if record:
@@ -212,6 +214,8 @@ class AttendanceManager:
                 "subject",
                 "session_label",
                 "confidence",
+                "liveness_score",
+                "snapshot_path",
             ],
             extrasaction="ignore",
         )

@@ -54,6 +54,22 @@ class RecognitionResult:
     matched_index: int
     bounding_box: Tuple[int, int, int, int]
     is_known: bool
+    status: str = "processing"
+    status_text: str = "Processing"
+    challenge_text: str = ""
+    live_verified: bool = False
+    liveness_score: float = 0.0
+    spoof_score: float = 0.0
+    spoof_detected: bool = False
+    spoof_reasons: List[str] = field(default_factory=list)
+    blink_count: int = 0
+    left_ear: float = 0.0
+    right_ear: float = 0.0
+    yaw: float = 0.0
+    pitch: float = 0.0
+    roll: float = 0.0
+    track_key: str = ""
+    should_log_spoof: bool = False
 
 
 @dataclass
@@ -540,26 +556,36 @@ class FaceEngine:
     @staticmethod
     def _draw_box(frame: np.ndarray, rec: RecognitionResult):
         top, right, bottom, left = rec.bounding_box
-        color = (0, 190, 90) if rec.is_known else (0, 70, 220)
+        if rec.status == "verified" and rec.live_verified:
+            color = (40, 190, 90)
+        elif rec.status == "spoof_detected":
+            color = (55, 55, 220)
+        elif rec.is_known:
+            color = (0, 210, 255)
+        else:
+            color = (0, 70, 220)
 
         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
-        cv2.rectangle(frame, (left, max(bottom - 28, 0)), (right, bottom), color, cv2.FILLED)
+        info_rows = [
+            f"{rec.name if rec.is_known else 'Unknown'} {rec.confidence:.0%}",
+            f"{rec.status_text} | L {rec.liveness_score:.0%}",
+        ]
+        if rec.challenge_text and rec.status not in {"verified", "spoof_detected"}:
+            info_rows.append(rec.challenge_text[:28])
+        label_height = 20 * len(info_rows) + 8
+        cv2.rectangle(frame, (left, max(bottom - label_height, 0)), (right, bottom), color, cv2.FILLED)
 
-        if rec.is_known:
-            label = f"{rec.name} d={rec.distance:.3f}"
-        else:
-            label = f"Unknown d={rec.distance:.3f}"
-
-        cv2.putText(
-            frame,
-            label,
-            (left + 4, max(bottom - 8, 12)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.48,
-            (255, 255, 255),
-            1,
-            cv2.LINE_AA,
-        )
+        for idx, line in enumerate(info_rows):
+            cv2.putText(
+                frame,
+                line,
+                (left + 4, max(bottom - label_height + 18 + (idx * 18), 14)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.46,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
 
     # Utility ------------------------------------------------------------
 

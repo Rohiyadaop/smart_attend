@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import sqlite3
 import threading
 from datetime import date, datetime, timedelta
@@ -104,6 +105,7 @@ class DBManager:
 
         self._ensure_attendance_schema(conn)
         self._ensure_presence_schema(conn)
+        self._ensure_spoof_schema(conn)
         self._normalize_existing_departments(conn)
 
         conn.commit()
@@ -119,6 +121,14 @@ class DBManager:
         columns = set(self._table_columns(conn, "attendance"))
         required = {"id", "student_id", "name", "date", "time", "confidence", "session_id"}
         if required.issubset(columns):
+            if "liveness_score" not in columns:
+                conn.execute(
+                    "ALTER TABLE attendance ADD COLUMN liveness_score REAL DEFAULT 0"
+                )
+            if "snapshot_path" not in columns:
+                conn.execute(
+                    "ALTER TABLE attendance ADD COLUMN snapshot_path TEXT DEFAULT ''"
+                )
             self._create_attendance_indexes(conn)
             return
 
@@ -143,6 +153,8 @@ class DBManager:
                 date        TEXT NOT NULL,
                 time        TEXT NOT NULL,
                 confidence  REAL DEFAULT 0,
+                liveness_score REAL DEFAULT 0,
+                snapshot_path TEXT DEFAULT '',
                 UNIQUE (student_id, session_id)
             )
         """)
@@ -187,6 +199,28 @@ class DBManager:
             CREATE INDEX IF NOT EXISTS idx_presence_bucket
             ON student_presence(bucket_start)
         """)
+
+    def _ensure_spoof_schema(self, conn: sqlite3.Connection):
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS spoof_logs (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id     TEXT DEFAULT '',
+                name           TEXT DEFAULT '',
+                session_id     INTEGER REFERENCES class_sessions(id) ON DELETE SET NULL,
+                date           TEXT NOT NULL,
+                time           TEXT NOT NULL,
+                confidence     REAL DEFAULT 0,
+                liveness_score REAL DEFAULT 0,
+                spoof_score    REAL DEFAULT 0,
+                challenge      TEXT DEFAULT '',
+                reason         TEXT DEFAULT '',
+                snapshot_path  TEXT DEFAULT '',
+                metadata_json  TEXT DEFAULT ''
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_spoof_date ON spoof_logs(date)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_spoof_session ON spoof_logs(session_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_spoof_student ON spoof_logs(student_id)")
 
     @staticmethod
     def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -488,14 +522,23 @@ class DBManager:
     def insert_attendance(self, student_id: str, name: str,
                           date_str: str, time_str: str,
                           confidence: float = 0.0,
+                          liveness_score: float = 0.0,
                           session_id: Optional[int] = None) -> Optional[Dict]:
         try:
             cur = self._cursor()
             cur.execute("""
                 INSERT OR IGNORE INTO attendance
-                    (student_id, session_id, name, date, time, confidence)
-                VALUES (?,?,?,?,?,?)
-            """, (student_id, session_id, name, date_str, time_str, confidence))
+                    (student_id, session_id, name, date, time, confidence, liveness_score)
+                VALUES (?,?,?,?,?,?,?)
+            """, (
+                student_id,
+                session_id,
+                name,
+                date_str,
+                time_str,
+                confidence,
+                liveness_score,
+            ))
             self._commit()
             if cur.rowcount == 0:
                 return None
@@ -503,6 +546,23 @@ class DBManager:
         except Exception as exc:
             logger.error("Attendance insert error: %s", exc)
             return None
+
+    def update_attendance_evidence(
+        self,
+        attendance_id: int,
+        liveness_score: float,
+        snapshot_path: str,
+    ) -> Optional[Dict]:
+        self._cursor().execute(
+            """
+            UPDATE attendance
+            SET liveness_score = ?, snapshot_path = ?
+            WHERE id = ?
+            """,
+            (float(liveness_score or 0.0), snapshot_path or "", int(attendance_id)),
+        )
+        self._commit()
+        return self.get_attendance_record(attendance_id)
 
     def get_attendance_record(self, attendance_id: int) -> Optional[Dict]:
         cur = self._cursor()
@@ -586,6 +646,103 @@ class DBManager:
             ORDER BY a.date DESC, a.time DESC
         """, (start, end))
         return [self._decorate_attendance(dict(r)) for r in cur.fetchall()]
+
+    def insert_spoof_log(
+        self,
+        student_id: str,
+        name: str,
+        date_str: str,
+        time_str: str,
+        reason: str,
+        confidence: float = 0.0,
+        liveness_score: float = 0.0,
+        spoof_score: float = 0.0,
+        challenge: str = "",
+        snapshot_path: str = "",
+        session_id: Optional[int] = None,
+        metadata: Optional[Dict] = None,
+    ) -> Optional[Dict]:
+        try:
+            cur = self._cursor()
+            cur.execute(
+                """
+                INSERT INTO spoof_logs
+                    (student_id, name, session_id, date, time, confidence,
+                     liveness_score, spoof_score, challenge, reason, snapshot_path,
+                     metadata_json)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    student_id or "",
+                    name or "",
+                    session_id,
+                    date_str,
+                    time_str,
+                    confidence,
+                    liveness_score,
+                    spoof_score,
+                    challenge or "",
+                    reason or "",
+                    snapshot_path or "",
+                    json.dumps(metadata or {}, ensure_ascii=True),
+                ),
+            )
+            self._commit()
+            return self.get_spoof_log(cur.lastrowid)
+        except Exception as exc:
+            logger.error("Spoof log insert error: %s", exc)
+            return None
+
+    def get_spoof_log(self, spoof_id: int) -> Optional[Dict]:
+        cur = self._cursor()
+        cur.execute("""
+            SELECT sl.*, cs.program, cs.department AS session_department,
+                   cs.year AS session_year, cs.room, cs.subject, cs.section,
+                   cs.started_at, cs.ended_at, cs.status AS session_status
+            FROM spoof_logs sl
+            LEFT JOIN class_sessions cs ON sl.session_id = cs.id
+            WHERE sl.id = ?
+        """, (spoof_id,))
+        row = cur.fetchone()
+        return self._decorate_spoof_log(dict(row)) if row else None
+
+    def get_spoof_logs(
+        self,
+        limit: int = 50,
+        date_str: Optional[str] = None,
+        session_id: Optional[int] = None,
+    ) -> List[Dict]:
+        params: List[object] = []
+        filters: List[str] = []
+        if date_str:
+            filters.append("sl.date = ?")
+            params.append(date_str)
+        if session_id:
+            filters.append("sl.session_id = ?")
+            params.append(int(session_id))
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+        params.append(max(int(limit), 1))
+
+        cur = self._cursor()
+        cur.execute(
+            f"""
+            SELECT sl.*, cs.program, cs.department AS session_department,
+                   cs.year AS session_year, cs.room, cs.subject, cs.section,
+                   cs.started_at, cs.ended_at, cs.status AS session_status
+            FROM spoof_logs sl
+            LEFT JOIN class_sessions cs ON sl.session_id = cs.id
+            {where_clause}
+            ORDER BY sl.date DESC, sl.time DESC, sl.id DESC
+            LIMIT ?
+            """,
+            params,
+        )
+        return [self._decorate_spoof_log(dict(r)) for r in cur.fetchall()]
+
+    def count_spoof_logs_by_date(self, date_str: str) -> int:
+        cur = self._cursor()
+        cur.execute("SELECT COUNT(*) FROM spoof_logs WHERE date = ?", (date_str,))
+        return cur.fetchone()[0]
 
     def get_student_attendance(self, student_id: str) -> List[Dict]:
         cur = self._cursor()
@@ -924,6 +1081,8 @@ class DBManager:
     def _decorate_attendance(self, record: Dict) -> Dict:
         record["department"] = normalize_branch(record.get("department", ""))
         record["branch_name"] = get_branch_name(record["department"]) if record["department"] else ""
+        record["snapshot_path"] = (record.get("snapshot_path") or "").replace("\\", "/")
+        record["snapshot_url"] = f"/evidence/{record['snapshot_path']}" if record["snapshot_path"] else ""
         session_department = normalize_branch(record.get("session_department", ""))
         session_year = int(record.get("session_year") or record.get("year") or 1)
         if record.get("session_id"):
@@ -957,6 +1116,31 @@ class DBManager:
             record["subject"] = ""
             record["section"] = ""
             record["program"] = PROGRAM_NAME
+        return record
+
+    def _decorate_spoof_log(self, record: Dict) -> Dict:
+        record["snapshot_path"] = (record.get("snapshot_path") or "").replace("\\", "/")
+        record["snapshot_url"] = f"/evidence/{record['snapshot_path']}" if record["snapshot_path"] else ""
+        record["reason"] = record.get("reason") or "spoof_suspected"
+        metadata_raw = record.get("metadata_json") or ""
+        try:
+            record["metadata"] = json.loads(metadata_raw) if metadata_raw else {}
+        except json.JSONDecodeError:
+            record["metadata"] = {}
+
+        session_department = normalize_branch(record.get("session_department", ""))
+        session_year = int(record.get("session_year") or 1)
+        if record.get("session_id"):
+            record["session_label"] = format_session_label(
+                record.get("program") or PROGRAM_NAME,
+                session_department,
+                session_year,
+                record.get("room", ""),
+                record.get("subject", ""),
+                record.get("section", ""),
+            )
+        else:
+            record["session_label"] = "No class session"
         return record
 
     def _decorate_presence(self, record: Dict) -> Dict:

@@ -833,6 +833,7 @@ from flask import (Flask, render_template, request, jsonify,
                    Response, redirect, url_for, session, send_file,
                    flash, abort)
 
+from config import settings
 # SmartAttend modules
 from core.face_engine      import BackendUnavailableError, FaceEngine
 from core.camera           import CameraManager, mjpeg_stream_generator
@@ -847,6 +848,10 @@ from core.college          import (
 from core.trainer          import ModelTrainer
 from core.gpio_indicator   import GPIOIndicator
 from database.db_manager   import DBManager
+from routes.serializers    import serialize_face
+from services.security_pipeline import SecurityPipeline
+from services.snapshot_service import SnapshotService
+from utils.image_utils     import safe_relative_to
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -894,6 +899,8 @@ attendmgr = AttendanceManager(db)
 gpio      = GPIOIndicator(enabled=GPIO_ENABLED)
 trainer   = ModelTrainer(engine)
 camera    = None        # initialised lazily on first /video_feed request
+security_pipeline = SecurityPipeline()
+snapshot_service = SnapshotService()
 
 # ── Shared recognition state ──────────────────────────────────────────────────
 recog_state = {
@@ -916,6 +923,11 @@ recog_state = {
     "recognition_fps":  0.0,
     "last_faces":       [],
     "last_overlay_at":  0.0,
+    "last_liveness_score": 0.0,
+    "last_spoof_score": 0.0,
+    "last_challenge":   None,
+    "last_spoof_reason": None,
+    "spoof_attempts_today": 0,
     "training_progress": None,     # set during model training
 }
 recog_lock = threading.Lock()
@@ -974,16 +986,7 @@ def _active_session_bundle():
 
 
 def _serialize_face(face):
-    return {
-        "name": face.name,
-        "student_id": face.student_id,
-        "confidence": face.confidence,
-        "distance": face.distance,
-        "similarity": face.similarity,
-        "matched_index": face.matched_index,
-        "bounding_box": list(face.bounding_box),
-        "is_known": face.is_known,
-    }
+    return serialize_face(face)
 
 
 def _attendance_payload(date_str: str, session_id: int | None = None):
@@ -1142,7 +1145,9 @@ def register_page():
 def admin_page():
     stats  = engine.get_model_stats()
     return render_template("admin.html",
-                           model_stats=stats, recog=recog_state)
+                           model_stats=stats,
+                           recog=recog_state,
+                           today_spoof_count=db.count_spoof_logs_by_date(_today_str()))
 
 
 @app.route("/live")
@@ -1169,6 +1174,15 @@ def video_feed():
         quality=STREAM_QUALITY,
     )
     return Response(gen, mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.route("/evidence/<path:relpath>")
+@login_required
+def evidence_file(relpath: str):
+    target = settings.evidence_dir / relpath
+    if not safe_relative_to(target, settings.evidence_dir) or not target.exists():
+        abort(404)
+    return send_file(target)
 
 
 def _ensure_camera():
@@ -1208,6 +1222,19 @@ def recognition_loop():
 
             result = engine.process_frame(frame, draw_boxes=False)
 
+            active_session = db.get_active_session()
+            active_session_id = (
+                int(active_session["id"])
+                if active_session and active_session.get("id")
+                else None
+            )
+            if active_session_id != confirmation_session_id:
+                confirmation_counts.clear()
+                confirmation_session_id = active_session_id
+                security_pipeline.set_session(active_session_id)
+
+            security_pipeline.evaluate(frame, result.faces)
+
             with recog_lock:
                 recog_state["frames_processed"] += 1
                 elapsed = max(loop_started - last_loop_started, 1e-6)
@@ -1220,19 +1247,14 @@ def recognition_loop():
                 recog_state["last_overlay_at"] = time.time()
             last_loop_started = loop_started
 
-            active_session = db.get_active_session()
-            active_session_id = (
-                int(active_session["id"])
-                if active_session and active_session.get("id")
-                else None
-            )
-            if active_session_id != confirmation_session_id:
-                confirmation_counts.clear()
-                confirmation_session_id = active_session_id
-
             current_frame_ids = set()
             for face in result.faces:
-                if not face.student_id or face.student_id in current_frame_ids:
+                if (
+                    not face.student_id
+                    or face.student_id in current_frame_ids
+                    or not face.live_verified
+                    or face.spoof_detected
+                ):
                     continue
                 current_frame_ids.add(face.student_id)
                 confirmation_counts[face.student_id] = confirmation_counts.get(face.student_id, 0) + 1
@@ -1243,8 +1265,56 @@ def recognition_loop():
             }
 
             for face in result.faces:
+                if face.should_log_spoof:
+                    snapshot_path = snapshot_service.save_snapshot(
+                        frame=frame,
+                        box=face.bounding_box,
+                        bucket="spoof",
+                        student_id=face.student_id,
+                        session_id=active_session_id,
+                        prefix="spoof",
+                    )
+                    db.insert_spoof_log(
+                        student_id=face.student_id,
+                        name=face.name,
+                        session_id=active_session_id,
+                        date_str=_today_str(),
+                        time_str=datetime.now().strftime("%H:%M:%S"),
+                        reason=", ".join(face.spoof_reasons) or "spoof_suspected",
+                        confidence=face.confidence,
+                        liveness_score=face.liveness_score,
+                        spoof_score=face.spoof_score,
+                        challenge=face.challenge_text,
+                        snapshot_path=snapshot_path,
+                        metadata={
+                            "status": face.status,
+                            "yaw": face.yaw,
+                            "pitch": face.pitch,
+                            "roll": face.roll,
+                            "blink_count": face.blink_count,
+                        },
+                    )
+
                 confirmed_frames = confirmation_counts.get(face.student_id, 0)
-                if face.student_id and confirmed_frames < ATTEND_CONFIRM_FRAMES:
+                if face.spoof_detected:
+                    outcome = {
+                        "status": "spoof_detected",
+                        "message": "Spoof attempt rejected",
+                        "record": None,
+                    }
+                elif not face.is_known or not face.student_id:
+                    outcome = {
+                        "status": "unknown",
+                        "message": "Unknown face",
+                        "record": None,
+                    }
+                elif not face.live_verified:
+                    outcome = {
+                        "status": face.status,
+                        "message": face.status_text,
+                        "record": None,
+                    }
+                elif confirmed_frames < ATTEND_CONFIRM_FRAMES:
                     outcome = {
                         "status": "confirming",
                         "message": (
@@ -1258,8 +1328,25 @@ def recognition_loop():
                         student_id = face.student_id,
                         name       = face.name,
                         confidence = face.confidence,
+                        liveness_score = face.liveness_score,
                         active_session = active_session,
                     )
+                    if outcome["status"] == "marked" and outcome.get("record"):
+                        snapshot_path = snapshot_service.save_snapshot(
+                            frame=frame,
+                            box=face.bounding_box,
+                            bucket="attendance",
+                            student_id=face.student_id,
+                            session_id=active_session_id,
+                            prefix="attendance",
+                        )
+                        record = db.update_attendance_evidence(
+                            attendance_id=outcome["record"]["id"],
+                            liveness_score=face.liveness_score,
+                            snapshot_path=snapshot_path,
+                        )
+                        if record:
+                            outcome["record"] = record
                 if (
                     outcome["status"] in {"marked", "duplicate"}
                     and active_session
@@ -1279,17 +1366,21 @@ def recognition_loop():
                     recog_state["last_similarity"] = face.similarity
                     recog_state["last_confidence"] = face.confidence
                     recog_state["last_match_index"] = face.matched_index
+                    recog_state["last_liveness_score"] = face.liveness_score
+                    recog_state["last_spoof_score"] = face.spoof_score
+                    recog_state["last_challenge"] = face.challenge_text
+                    recog_state["last_spoof_reason"] = ", ".join(face.spoof_reasons) if face.spoof_reasons else None
+                    recog_state["spoof_attempts_today"] = db.count_spoof_logs_by_date(_today_str())
                     if outcome["status"] == "marked":
                         recog_state["last_marked_name"] = face.name
                         recog_state["last_marked_time"] = recog_state["last_timestamp"]
                         recog_state["today_count"] = db.count_attendance_records_by_date(_today_str())
 
-                # GPIO feedback
                 if outcome["status"] == "marked":
                     gpio.on_attendance_marked(face.name)
                 elif outcome["status"] == "duplicate":
                     gpio.on_duplicate(face.name)
-                elif outcome["status"] == "confirming":
+                elif outcome["status"] in {"confirming", "awaiting_blink", "challenge_pending", "liveness_pending"}:
                     pass
                 else:
                     gpio.on_unknown_face()
@@ -1360,6 +1451,7 @@ def api_start_recognition():
             "message": str(exc),
         }), 400
 
+    security_pipeline.set_session(int(active_session["id"]))
     recog_state["running"] = True
     t = threading.Thread(target=recognition_loop, daemon=True,
                          name="RecognitionLoop")
@@ -1371,6 +1463,7 @@ def api_start_recognition():
 @login_required
 def api_stop_recognition():
     recog_state["running"] = False
+    security_pipeline.reset()
     with recog_lock:
         recog_state["last_faces"] = []
     return jsonify({"success": True, "status": "stopped", "message": "Recognition stopped."})
@@ -1406,6 +1499,7 @@ def api_start_session():
         section,
     )
     attendmgr.clear_session_cache(session_row["id"])
+    security_pipeline.set_session(int(session_row["id"]))
     return jsonify({
         "success": True,
         "message": f"Class session started for {session_row['display_label']}.",
@@ -1418,6 +1512,7 @@ def api_start_session():
 def api_stop_session():
     session_row = db.stop_class_session()
     recog_state["running"] = False
+    security_pipeline.reset()
     with recog_lock:
         recog_state["last_faces"] = []
     if not session_row:
@@ -1454,11 +1549,16 @@ def api_live_status():
             "last_confidence": recog_state["last_confidence"],
             "last_match_index": recog_state["last_match_index"],
             "last_processing_ms": recog_state["last_processing_ms"],
+            "last_liveness_score": recog_state["last_liveness_score"],
+            "last_spoof_score": recog_state["last_spoof_score"],
+            "last_challenge": recog_state["last_challenge"],
+            "last_spoof_reason": recog_state["last_spoof_reason"],
             "backend":        recog_state["last_backend"],
             "camera_fps":     recog_state["camera_fps"],
             "recognition_fps": recog_state["recognition_fps"],
             "faces":          [_serialize_face(face) for face in recog_state["last_faces"]],
             "today_count":    today_count,
+            "spoof_attempts_today": db.count_spoof_logs_by_date(_today_str()),
             "session_count":  (active_summary or {}).get("present", 0),
             "active_session": active_session,
             "active_summary": active_summary,
@@ -1499,6 +1599,20 @@ def api_attendance():
     date_str = request.args.get("date", _today_str())
     session_id = request.args.get("session", type=int)
     return jsonify(_attendance_payload(date_str, session_id=session_id))
+
+
+@app.route("/api/spoof_logs")
+@login_required
+def api_spoof_logs():
+    date_str = request.args.get("date") or _today_str()
+    session_id = request.args.get("session", type=int)
+    limit = request.args.get("limit", default=25, type=int)
+    return jsonify({
+        "success": True,
+        "date": date_str,
+        "count": db.count_spoof_logs_by_date(date_str),
+        "logs": db.get_spoof_logs(limit=limit, date_str=date_str, session_id=session_id),
+    })
 
 
 @app.route("/api/student_presence_timeline/<student_id>")
