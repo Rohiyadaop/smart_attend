@@ -75,9 +75,8 @@ class SecurityPipeline:
             blink_detected = self._update_blink_state(state, metrics.avg_ear)
             if blink_detected:
                 state.total_blinks += 1
-                if not state.natural_blink_done:
-                    state.natural_blink_done = True
-                if state.challenge_code == "blink_twice" and not state.challenge_passed:
+                # Count blinks for the active challenge (we only use blink challenge)
+                if state.challenge_code and not state.challenge_passed:
                     state.challenge_blinks += 1
 
             state.yaw_history.append(metrics.yaw)
@@ -92,7 +91,8 @@ class SecurityPipeline:
                 "smile_score": round(metrics.smile_score, 4),
             }
 
-            if state.natural_blink_done and not state.challenge_code:
+            # Immediately issue the blink challenge if none is active
+            if not state.challenge_code:
                 challenge = self._challenges.pick()
                 state.challenge_code = challenge.code
                 state.challenge_text = challenge.text
@@ -129,7 +129,8 @@ class SecurityPipeline:
             face.pitch = round(metrics.pitch, 2)
             face.roll = round(metrics.roll, 2)
             face.blink_count = state.total_blinks
-            face.challenge_text = state.challenge_text if state.natural_blink_done else "Blink naturally"
+            # Always show the current challenge text (we issue challenge immediately)
+            face.challenge_text = state.challenge_text
             face.liveness_score = round(self._liveness_score(state, spoof.spoof_score), 4)
             face.spoof_score = round(spoof.spoof_score, 4)
             face.spoof_detected = spoof.detected
@@ -144,11 +145,7 @@ class SecurityPipeline:
                     state.last_spoof_logged_at = now
                 continue
 
-            if not state.natural_blink_done:
-                face.status = "awaiting_blink"
-                face.status_text = "Waiting for natural blink"
-                face.live_verified = False
-                continue
+            # No longer require a prior natural blink; challenges are issued immediately
 
             if not state.challenge_passed:
                 face.status = "challenge_pending"
@@ -197,16 +194,8 @@ class SecurityPipeline:
 
     @staticmethod
     def _liveness_score(state: SecurityTrackState, spoof_score: float) -> float:
-        blink_score = 0.30 if state.natural_blink_done else min(state.total_blinks * 0.12, 0.24)
-        challenge_score = 0.40 if state.challenge_passed else (state.challenge_progress * 0.30)
-        pose_motion = 0.0
-        if len(state.yaw_history) > 1:
-            yaw_span = max(state.yaw_history) - min(state.yaw_history)
-            pitch_span = max(state.pitch_history) - min(state.pitch_history)
-            pose_motion = min((yaw_span + pitch_span) / 24.0, 0.20)
-        presence_score = min(state.frames_seen / 15.0, 1.0) * 0.10
-        total = blink_score + challenge_score + pose_motion + presence_score - (spoof_score * 0.30)
-        return max(0.0, min(total, 1.0))
+        # Liveness is determined solely by passing the blink challenge
+        return 1.0 if state.challenge_passed else 0.0
 
     def _expire_tracks(self, now: float):
         expired = [

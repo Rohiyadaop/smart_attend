@@ -45,7 +45,7 @@ class Settings:
     challenge_mouth_open_ratio: float = float(
         os.environ.get("CHALLENGE_MOUTH_OPEN_RATIO", "0.20")
     )
-    challenge_blink_count: int = int(os.environ.get("CHALLENGE_BLINK_COUNT", "2"))
+    challenge_blink_count: int = int(os.environ.get("CHALLENGE_BLINK_COUNT", "0"))
     min_face_box_margin_px: int = int(os.environ.get("FACE_BOX_MARGIN_PX", "18"))
     max_security_faces: int = int(os.environ.get("MAX_SECURITY_FACES", "3"))
     attendance_snapshot_dir: Path = ATTENDANCE_EVIDENCE_DIR
