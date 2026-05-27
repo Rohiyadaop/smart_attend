@@ -21,7 +21,7 @@ class SecurityTrackState:
     total_blinks: int = 0
     natural_blink_done: bool = False
     challenge_code: str = ""
-    challenge_text: str = "Blink naturally to begin"
+    challenge_text: str = "Turn your head left or right"
     challenge_started_at: float = 0.0
     challenge_passed: bool = False
     challenge_progress: float = 0.0
@@ -75,12 +75,25 @@ class SecurityPipeline:
             blink_detected = self._update_blink_state(state, metrics.avg_ear)
             if blink_detected:
                 state.total_blinks += 1
-                # Count blinks for the active challenge (we only use blink challenge)
-                if state.challenge_code and not state.challenge_passed:
-                    state.challenge_blinks += 1
+                state.natural_blink_done = True
+
+            if not state.challenge_code:
+                self._issue_challenge(state, now)
+
+            if (
+                state.challenge_code
+                and not state.challenge_passed
+                and (now - state.challenge_started_at) > settings.challenge_timeout_sec
+            ):
+                self._issue_challenge(state, now)
 
             state.yaw_history.append(metrics.yaw)
             state.pitch_history.append(metrics.pitch)
+
+            yaw_window = list(state.yaw_history)
+            yaw_start = yaw_window[0] if yaw_window else metrics.yaw
+            yaw_span = (max(yaw_window) - min(yaw_window)) if len(yaw_window) > 1 else 0.0
+            head_turn_delta = max(abs(metrics.yaw - yaw_start), yaw_span)
 
             state_metrics = {
                 "yaw": round(metrics.yaw, 2),
@@ -89,34 +102,13 @@ class SecurityPipeline:
                 "ear": round(metrics.avg_ear, 4),
                 "mouth_open_ratio": round(metrics.mouth_open_ratio, 4),
                 "smile_score": round(metrics.smile_score, 4),
+                "head_turn_delta": round(head_turn_delta, 2),
             }
-
-            # Immediately issue the blink challenge if none is active
-            if not state.challenge_code:
-                challenge = self._challenges.pick()
-                state.challenge_code = challenge.code
-                state.challenge_text = challenge.text
-                state.challenge_started_at = now
-                state.challenge_blinks = 0
-                state.challenge_progress = 0.0
-
-            if (
-                state.challenge_code
-                and not state.challenge_passed
-                and (now - state.challenge_started_at) > settings.challenge_timeout_sec
-            ):
-                challenge = self._challenges.pick()
-                state.challenge_code = challenge.code
-                state.challenge_text = challenge.text
-                state.challenge_started_at = now
-                state.challenge_blinks = 0
-                state.challenge_progress = 0.0
 
             if state.challenge_code and not state.challenge_passed:
                 state.challenge_passed, state.challenge_progress = self._challenges.evaluate(
                     state.challenge_code,
                     state_metrics,
-                    state.challenge_blinks,
                 )
 
             crop = crop_box(frame, face.bounding_box, margin=settings.min_face_box_margin_px)
@@ -144,8 +136,6 @@ class SecurityPipeline:
                     face.should_log_spoof = True
                     state.last_spoof_logged_at = now
                 continue
-
-            # No longer require a prior natural blink; challenges are issued immediately
 
             if not state.challenge_passed:
                 face.status = "challenge_pending"
@@ -194,8 +184,19 @@ class SecurityPipeline:
 
     @staticmethod
     def _liveness_score(state: SecurityTrackState, spoof_score: float) -> float:
-        # Liveness is determined solely by passing the blink challenge
+        # Liveness is determined solely by passing the head-turn challenge.
         return 1.0 if state.challenge_passed else 0.0
+
+    def _issue_challenge(self, state: SecurityTrackState, now: float):
+        challenge = self._challenges.pick()
+        state.challenge_code = challenge.code
+        state.challenge_text = challenge.text
+        state.challenge_started_at = now
+        state.challenge_passed = False
+        state.challenge_progress = 0.0
+        state.challenge_blinks = 0
+        state.yaw_history.clear()
+        state.pitch_history.clear()
 
     def _expire_tracks(self, now: float):
         expired = [

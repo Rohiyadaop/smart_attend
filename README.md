@@ -308,3 +308,7 @@ Camera Module     ──►  CSI connector (silver cable, blue side up)
 *Developed as a B.Tech Computer Science / ECE Final Year Project*
 *Veer Madho Singh Bhandari Uttarakhand Technical University, Dehradun*
 "# smart_attend" 
+
+
+for env -> PS C:\Users\ry953\OneDrive\Desktop\6th Sem\smartattend> (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& "c:\Users\ry953\OneDrive\Desktop\6th Sem\smartattend\venv\Scripts\Activate.ps1")
+(venv) PS C:\Users\ry953\OneDrive\Desktop\6th Sem\smartattend> 
