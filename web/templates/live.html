@@ -18,7 +18,7 @@
 .session-box{margin-top:16px;padding:16px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}.session-box strong{display:block;font-family:var(--serif);font-size:24px;line-height:1.15;margin:12px 0 10px}.session-box p{margin-top:8px;color:var(--muted);font-size:14px}
 .topbar{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}.topbar .mini{font-size:13px;color:var(--muted)}
 .status-dot{width:10px;height:10px;border-radius:999px;background:#8c97ae;display:inline-block;margin-right:8px}.status-dot.live{background:#6ce08b;box-shadow:0 0 0 4px rgba(108,224,139,.18)}
-.feed-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:18px}.feed{width:100%;height:100%;max-height:calc(100vh - 140px);object-fit:contain;border-radius:22px;background:#0f1728;border:1px solid var(--line)}
+.feed-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:18px}.feed-stage{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}.feed{width:100%;height:100%;max-height:calc(100vh - 140px);object-fit:contain;border-radius:22px;background:#0f1728;border:1px solid var(--line)}.fullscreen-btn{position:absolute;top:18px;right:18px;z-index:2;min-width:128px}.feed-stage:fullscreen{background:#020814;padding:24px}.feed-stage:fullscreen .feed{max-height:100%;border-radius:18px}
 .overlay{padding:18px 22px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:12px;background:rgba(9,16,29,.92)}.metric{padding:14px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}.metric label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.48)}.metric div{margin-top:6px;font-weight:700}.mono{font-family:var(--mono);font-size:13px}
 #toast{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:10px}.toast{padding:12px 14px;border-radius:14px;background:#203152;color:#fff;max-width:320px}.toast.error{background:#872f2f}.toast.success{background:#315b43}
 @media (max-width:980px){.page{grid-template-columns:1fr}.overlay{grid-template-columns:1fr 1fr}}@media (max-width:640px){.overlay,.row{grid-template-columns:1fr;display:grid}.topbar{flex-direction:column;align-items:flex-start}}
@@ -66,10 +66,15 @@
         <span class="status-dot{% if active_session %} live{% endif %}" id="statusDot"></span>
         <strong id="statusText">{% if active_session %}Ready for live attendance{% else %}Waiting for class setup{% endif %}</strong>
       </div>
-      <div class="mini" id="clockText">Loading time</div>
+      <div class="row" style="margin-top:0">
+        <button class="btn btn-ghost fullscreen-btn" id="fullscreenBtn" type="button">Full Screen</button>
+        <div class="mini" id="clockText">Loading time</div>
+      </div>
     </div>
     <div class="feed-wrap">
-      <img class="feed" src="/video_feed" alt="Live camera feed" onerror="this.alt='Camera unavailable';this.style.opacity='0.35';">
+      <div class="feed-stage" id="feedStage">
+        <img class="feed" src="/video_feed" alt="Live camera feed" onerror="this.alt='Camera unavailable';this.style.opacity='0.35';">
+      </div>
     </div>
     <div class="overlay">
       <div class="metric"><label>Last Face Seen</label><div id="lastSeen">-</div></div>
@@ -85,16 +90,22 @@
 let recognitionOn=false;
 let latestMarkedToken=null;
 let statusHydrated=false;
+const fullscreenBtn=document.getElementById('fullscreenBtn');
+const feedStage=document.getElementById('feedStage');
 const statusText={marked:'Attendance marked',duplicate:'Already marked in this class',low_confidence:'Low confidence - not marked',unknown:'Unknown face',no_active_session:'Start class session first',not_in_session:'Student does not belong to this class'};
 function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3600)}
 function setClock(){document.getElementById('clockText').textContent=new Date().toLocaleString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function updateFullscreenButton(){fullscreenBtn.textContent=document.fullscreenElement?'Exit Full Screen':'Full Screen'}
+async function toggleFullscreen(){try{if(document.fullscreenElement){await document.exitFullscreen()}else{await feedStage.requestFullscreen()}}catch(e){toast('Full screen is not available right now.','error')}}
 function applySession(session,summary){document.getElementById('sessionState').textContent=session?'Active session':'Waiting for session';document.getElementById('sessionLabel').textContent=session?session.display_label:'No active class session';document.getElementById('sessionBatch').textContent=session?session.batch_label:'-';document.getElementById('sessionRoomValue').textContent=session?session.room:'-';document.getElementById('sessionMarked').textContent=summary?summary.present:0;document.getElementById('classCount').textContent=summary?summary.present:0;document.getElementById('statusDot').className=session?'status-dot live':'status-dot';document.getElementById('statusText').textContent=session?'Ready for live attendance':'Waiting for class setup';if(session){document.getElementById('sessionBranch').value=session.department;document.getElementById('sessionYear').value=session.year;document.getElementById('sessionRoom').value=session.room||'';document.getElementById('sessionSubject').value=session.subject||'';document.getElementById('sessionSection').value=session.section||'';}}
 function setRecognitionButton(){const btn=document.getElementById('recogBtn');btn.textContent=recognitionOn?'Stop Recognition':'Start Recognition';btn.className=recognitionOn?'btn btn-danger':'btn btn-ghost'}
 function toggleRecognition(){const action=recognitionOn?'stop':'start';fetch(`/api/recognition/${action}`,{method:'POST'}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'Could not change recognition state.','error');return;}recognitionOn=action==='start';setRecognitionButton();pollStatus()}).catch(()=>toast('Network error while changing recognition state.','error'))}
 function startClassSession(){fetch('/api/session/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({department:document.getElementById('sessionBranch').value,year:parseInt(document.getElementById('sessionYear').value,10),room:document.getElementById('sessionRoom').value.trim(),subject:document.getElementById('sessionSubject').value.trim(),section:document.getElementById('sessionSection').value.trim()})}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'Could not start class session.','error');return;}toast(data.message,'success');fetch('/api/recognition/start',{method:'POST'}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'Class started but recognition did not start.','error')}pollStatus()})}).catch(()=>toast('Network error while starting class session.','error'))}
 function stopClassSession(){fetch('/api/session/stop',{method:'POST'}).then(async r=>({ok:r.ok,data:await r.json()})).then(({ok,data})=>{if(!ok){toast(data.message||'No active class session.');return;}recognitionOn=false;setRecognitionButton();applySession(null,null);toast(data.message,'success');pollStatus()}).catch(()=>toast('Network error while stopping class session.','error'))}
 function pollStatus(){fetch('/api/live_status').then(r=>r.json()).then(data=>{recognitionOn=!!data.running;setRecognitionButton();document.getElementById('todayCount').textContent=data.today_count||0;document.getElementById('lastSeen').textContent=data.last_name?`${data.last_name}${data.last_time?` at ${data.last_time}`:''}`:'-';document.getElementById('lastMarked').textContent=data.last_marked_name?`${data.last_marked_name}${data.last_marked_time?` at ${data.last_marked_time}`:''}`:'-';document.getElementById('lastStatus').textContent=data.last_message||statusText[data.last_status]||'Waiting for recognition';const markedToken=data.last_marked_name&&data.last_marked_time?`${data.last_marked_name}|${data.last_marked_time}`:null;if(statusHydrated&&markedToken&&markedToken!==latestMarkedToken){toast(`Attendance marked for ${data.last_marked_name}`,'success')}latestMarkedToken=markedToken||latestMarkedToken;statusHydrated=true;applySession(data.active_session,data.active_summary)}).catch(()=>{})}
-setClock();setInterval(setClock,60000);setRecognitionButton();applySession({{ active_session|tojson }},{{ active_summary|tojson }});pollStatus();setInterval(pollStatus,2500);
+fullscreenBtn.addEventListener('click',toggleFullscreen);
+document.addEventListener('fullscreenchange',updateFullscreenButton);
+setClock();setInterval(setClock,60000);setRecognitionButton();updateFullscreenButton();applySession({{ active_session|tojson }},{{ active_summary|tojson }});pollStatus();setInterval(pollStatus,2500);
 </script>
 </body>
 </html>
