@@ -825,6 +825,7 @@ import uuid
 import shutil
 import logging
 import threading
+import webbrowser
 from pathlib import Path
 from datetime import datetime, date
 from functools import wraps
@@ -849,6 +850,7 @@ from core.trainer          import ModelTrainer
 from core.gpio_indicator   import GPIOIndicator
 from database.db_manager   import DBManager
 from routes.serializers    import serialize_face
+from services.audio_feedback import AttendanceAudioFeedback
 from services.security_pipeline import SecurityPipeline
 from services.snapshot_service import SnapshotService
 from utils.image_utils     import safe_relative_to
@@ -879,6 +881,16 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASS",  "smartattend2024")
 CAMERA_BACKEND = os.environ.get("CAMERA",      "auto")   # auto|picamera2|opencv
 CAMERA_DEVICE  = int(os.environ.get("CAM_DEV", "0"))
 GPIO_ENABLED   = os.environ.get("GPIO", "false").lower() == "true"
+AUDIO_FEEDBACK_ENABLED = os.environ.get("ATTENDANCE_AUDIO", "true").lower() == "true"
+AUTO_OPEN_BROWSER = os.environ.get(
+    "AUTO_OPEN_BROWSER",
+    "true" if os.name == "nt" else "false",
+).lower() == "true"
+AUTO_OPEN_BROWSER_URL = os.environ.get("AUTO_OPEN_BROWSER_URL", "http://127.0.0.1:5000")
+AUTO_OPEN_BROWSER_DELAY_SEC = max(
+    float(os.environ.get("AUTO_OPEN_BROWSER_DELAY_SEC", "1.5")),
+    0.0,
+)
 RECOGNITION_FPS = max(float(os.environ.get("RECOG_FPS", "30")), 1.0)
 STREAM_FPS      = max(int(os.environ.get("STREAM_FPS", "30")), 1)
 STREAM_QUALITY  = max(int(os.environ.get("STREAM_JPEG_QUALITY", "70")), 40)
@@ -897,6 +909,10 @@ db        = DBManager()
 engine    = FaceEngine()
 attendmgr = AttendanceManager(db)
 gpio      = GPIOIndicator(enabled=GPIO_ENABLED)
+audio_feedback = AttendanceAudioFeedback(
+    enabled=AUDIO_FEEDBACK_ENABLED,
+    beep_enabled=not GPIO_ENABLED,
+)
 trainer   = ModelTrainer(engine)
 camera    = None        # initialised lazily on first /video_feed request
 security_pipeline = SecurityPipeline()
@@ -1377,10 +1393,17 @@ def recognition_loop():
                         recog_state["today_count"] = db.count_attendance_records_by_date(_today_str())
 
                 if outcome["status"] == "marked":
+                    audio_feedback.clear_prompt_cache(face.track_key)
+                    audio_feedback.on_attendance_marked(face.name)
                     gpio.on_attendance_marked(face.name)
                 elif outcome["status"] == "duplicate":
                     gpio.on_duplicate(face.name)
-                elif outcome["status"] in {"confirming", "awaiting_blink", "challenge_pending", "liveness_pending"}:
+                elif outcome["status"] in {"challenge_pending", "liveness_pending", "processing"}:
+                    audio_feedback.on_guidance(
+                        face.track_key,
+                        face.challenge_text or face.status_text,
+                    )
+                elif outcome["status"] in {"confirming", "awaiting_blink"}:
                     pass
                 else:
                     gpio.on_unknown_face()
@@ -1857,19 +1880,28 @@ def startup():
         db.stop_class_session(active_session["id"])
     engine.load_model()
     recog_state["today_count"] = db.count_attendance_records_by_date(_today_str())
+    if AUTO_OPEN_BROWSER:
+        threading.Timer(AUTO_OPEN_BROWSER_DELAY_SEC, _open_browser_on_startup).start()
     logger.info("=" * 55)
     logger.info("  SmartAttend — Face Recognition Attendance System")
     logger.info("  Open  http://<raspberry-pi-ip>:5000  in browser")
     logger.info("=" * 55)
 
 
+def _open_browser_on_startup():
+    try:
+        opened = webbrowser.open(AUTO_OPEN_BROWSER_URL, new=2)
+        if opened:
+            logger.info("Opened SmartAttend in browser: %s", AUTO_OPEN_BROWSER_URL)
+        else:
+            logger.warning("Browser auto-open returned false for %s", AUTO_OPEN_BROWSER_URL)
+    except Exception as exc:
+        logger.warning("Browser auto-open failed: %s", exc)
+
+
 if __name__ == "__main__":
     startup()
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
-
-
-
-
 
 
 
